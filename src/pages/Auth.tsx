@@ -78,7 +78,15 @@ const Auth = () => {
                   }
                 }}
               >
-                Continuar com Google
+                <img
+                  src="/lovable-uploads/8a2cd7d7-4123-41df-b1a0-9709f014b162.png"
+                  alt="Logomarca do Google"
+                  className="h-5 w-5"
+                  loading="lazy"
+                  width={20}
+                  height={20}
+                />
+                <span>Continuar com Google</span>
               </Button>
             </div>
             <form onSubmit={handleSubmit} className="grid gap-4">
