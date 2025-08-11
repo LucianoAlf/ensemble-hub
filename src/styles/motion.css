@@ -1,8 +1,6 @@
 /* Additional utilities for signature motion */
-@layer utilities {
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
+.animate-float {
+  animation: float 6s ease-in-out infinite;
 }
 
 @keyframes float {
