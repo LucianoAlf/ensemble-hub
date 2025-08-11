@@ -10,6 +10,7 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
+  signInWithGoogle: () => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -61,6 +62,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return { error: error as any };
   };
 
+  const signInWithGoogle: AuthContextValue["signInWithGoogle"] = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth`,
+      },
+    });
+    if (error) {
+      toast("Erro no login com Google", { description: error.message });
+    } else {
+      toast("Redirecionando para Google...", { description: "Conclua a autenticação." });
+    }
+    return { error: error as any };
+  };
+
   const signOut: AuthContextValue["signOut"] = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -71,7 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return { error: error as any };
   };
 
-  const value = useMemo<AuthContextValue>(() => ({ user, session, loading, signIn, signUp, signOut }), [user, session, loading]);
+  const value = useMemo<AuthContextValue>(() => ({ user, session, loading, signIn, signUp, signOut, signInWithGoogle }), [user, session, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,17 @@ const Auth = () => {
   const location = useLocation() as any;
   const redirectTo = location?.state?.from?.pathname || "/dashboard";
 
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithGoogle, user, loading: authLoading } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(redirectTo, { replace: true });
+    }
+  }, [authLoading, user, navigate, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +64,23 @@ const Auth = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="grid gap-3 mb-4">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading}
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    await signInWithGoogle();
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                Continuar com Google
+              </Button>
+            </div>
             <form onSubmit={handleSubmit} className="grid gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="email">E-mail</Label>
