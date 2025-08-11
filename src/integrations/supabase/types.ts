@@ -14,7 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       vw_alunos_participantes: {
@@ -131,7 +154,17 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      get_alunos_participantes: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string | null
+          email: string | null
+          id: string | null
+          nome: string | null
+          tenant_id: string | null
+          unidade_id: string | null
+        }[]
+      }
     }
     Enums: {
       event_status: "rascunho" | "confirmado" | "cancelado"
