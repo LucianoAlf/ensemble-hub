@@ -1,8 +1,11 @@
 import { Link, NavLink } from "react-router-dom";
-import { Music, LayoutGrid, Users, CalendarDays } from "lucide-react";
+import { Music, LayoutGrid, Users, CalendarDays, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthProvider";
 
 const Header = () => {
+  const { user, signOut } = useAuth();
+
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
@@ -32,12 +35,23 @@ const Header = () => {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Button variant="ghost" asChild>
-            <Link to="/dashboard">Demo</Link>
-          </Button>
-          <Button variant="hero" asChild>
-            <Link to="#">Entrar</Link>
-          </Button>
+          {!user ? (
+            <>
+              <Button variant="ghost" asChild>
+                <Link to="/dashboard">Demo</Link>
+              </Button>
+              <Button variant="hero" asChild>
+                <Link to="/auth">Entrar</Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <span className="hidden text-sm text-muted-foreground md:inline">{user.email}</span>
+              <Button variant="outline" onClick={async () => { await signOut(); }}>
+                <LogOut className="mr-2 h-4 w-4" /> Sair
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>
