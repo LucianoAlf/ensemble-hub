@@ -112,7 +112,7 @@ const Auth = () => {
                   required
                 />
               </div>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" variant="hero" disabled={loading}>
                 {loading ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}
               </Button>
             </form>
