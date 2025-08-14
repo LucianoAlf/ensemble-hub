@@ -67,13 +67,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/dashboard`,
-        skipBrowserRedirect: true,
       },
     });
     if (error) {
       toast("Erro no login com Google", { description: error.message });
     } else {
-      toast("Autenticação com Google iniciada", { description: "Redirecionando..." });
+      toast("Redirecionando para Google...", { description: "Conclua a autenticação." });
     }
     return { error: error as any };
   };
