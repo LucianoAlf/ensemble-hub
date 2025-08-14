@@ -14,6 +14,210 @@ export type Database = {
   }
   public: {
     Tables: {
+      banda: {
+        Row: {
+          ativa: boolean | null
+          created_at: string | null
+          descricao: string | null
+          genero: string | null
+          id: string
+          logo_url: string | null
+          nome: string
+          tenant_id: string
+          unidade_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativa?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          genero?: string | null
+          id?: string
+          logo_url?: string | null
+          nome: string
+          tenant_id: string
+          unidade_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativa?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          genero?: string | null
+          id?: string
+          logo_url?: string | null
+          nome?: string
+          tenant_id?: string
+          unidade_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      banda_membro: {
+        Row: {
+          ativo: boolean | null
+          banda_id: string | null
+          created_at: string | null
+          id: string
+          instrumento: string | null
+          papel: string | null
+          user_id: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          banda_id?: string | null
+          created_at?: string | null
+          id?: string
+          instrumento?: string | null
+          papel?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          banda_id?: string | null
+          created_at?: string | null
+          id?: string
+          instrumento?: string | null
+          papel?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banda_membro_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banda_membro_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evento: {
+        Row: {
+          banda_id: string | null
+          created_at: string | null
+          descricao: string | null
+          endereco: string | null
+          fim: string | null
+          id: string
+          inicio: string
+          local: string | null
+          orcamento: number | null
+          sala_id: string | null
+          status: string | null
+          tenant_id: string
+          tipo: string
+          titulo: string
+          unidade_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          banda_id?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          endereco?: string | null
+          fim?: string | null
+          id?: string
+          inicio: string
+          local?: string | null
+          orcamento?: number | null
+          sala_id?: string | null
+          status?: string | null
+          tenant_id: string
+          tipo?: string
+          titulo: string
+          unidade_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          banda_id?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          endereco?: string | null
+          fim?: string | null
+          id?: string
+          inicio?: string
+          local?: string | null
+          orcamento?: number | null
+          sala_id?: string | null
+          status?: string | null
+          tenant_id?: string
+          tipo?: string
+          titulo?: string
+          unidade_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evento_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evento_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financeiro: {
+        Row: {
+          created_at: string | null
+          data_transacao: string | null
+          descricao: string | null
+          evento_id: string | null
+          id: string
+          tenant_id: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string | null
+          data_transacao?: string | null
+          descricao?: string | null
+          evento_id?: string | null
+          id?: string
+          tenant_id: string
+          tipo: string
+          valor: number
+        }
+        Update: {
+          created_at?: string | null
+          data_transacao?: string | null
+          descricao?: string | null
+          evento_id?: string | null
+          id?: string
+          tenant_id?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "evento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_eventos_proximos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -63,70 +267,44 @@ export type Database = {
         Row: {
           ativa: boolean | null
           created_at: string | null
+          descricao: string | null
+          genero: string | null
           id: string | null
+          logo_url: string | null
+          membros_count: number | null
           nome: string | null
           tenant_id: string | null
           unidade_id: string | null
-        }
-        Insert: {
-          ativa?: boolean | null
-          created_at?: string | null
-          id?: string | null
-          nome?: string | null
-          tenant_id?: string | null
-          unidade_id?: string | null
-        }
-        Update: {
-          ativa?: boolean | null
-          created_at?: string | null
-          id?: string | null
-          nome?: string | null
-          tenant_id?: string | null
-          unidade_id?: string | null
         }
         Relationships: []
       }
       vw_eventos_proximos: {
         Row: {
           banda_id: string | null
+          banda_nome: string | null
           created_at: string | null
+          descricao: string | null
+          endereco: string | null
           fim: string | null
           id: string | null
           inicio: string | null
+          local: string | null
+          orcamento: number | null
           sala_id: string | null
-          status: Database["public"]["Enums"]["event_status"] | null
+          status: string | null
           tenant_id: string | null
-          tipo: Database["public"]["Enums"]["event_type"] | null
+          tipo: string | null
           titulo: string | null
           unidade_id: string | null
         }
-        Insert: {
-          banda_id?: string | null
-          created_at?: string | null
-          fim?: string | null
-          id?: string | null
-          inicio?: string | null
-          sala_id?: string | null
-          status?: Database["public"]["Enums"]["event_status"] | null
-          tenant_id?: string | null
-          tipo?: Database["public"]["Enums"]["event_type"] | null
-          titulo?: string | null
-          unidade_id?: string | null
-        }
-        Update: {
-          banda_id?: string | null
-          created_at?: string | null
-          fim?: string | null
-          id?: string | null
-          inicio?: string | null
-          sala_id?: string | null
-          status?: Database["public"]["Enums"]["event_status"] | null
-          tenant_id?: string | null
-          tipo?: Database["public"]["Enums"]["event_type"] | null
-          titulo?: string | null
-          unidade_id?: string | null
-        }
         Relationships: [
+          {
+            foreignKeyName: "evento_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "evento_banda_id_fkey"
             columns: ["banda_id"]
