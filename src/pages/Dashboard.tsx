@@ -85,36 +85,9 @@ const Dashboard = () => {
   };
 
   const handleCreateEvent = async (eventData: EventItem) => {
-    try {
-      const { data, error } = await supabase
-        .rpc('create_evento', {
-          p_titulo: eventData.name,
-          p_tipo: eventData.type,
-          p_inicio: new Date(eventData.date).toISOString(),
-          p_local: eventData.venue,
-          p_banda_id: null, // Would need to map band name to ID
-          p_orcamento: eventData.budget || null,
-          p_descricao: eventData.description || null
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Evento criado com sucesso!",
-        description: `O evento "${eventData.name}" foi adicionado.`,
-      });
-
-      // Refresh dashboard data
-      loadDashboardData();
-      setOpenEventDialog(false);
-    } catch (error) {
-      console.error('Error creating event:', error);
-      toast({
-        title: "Erro ao criar evento",
-        description: "Tente novamente mais tarde.",
-        variant: "destructive",
-      });
-    }
+    // The CreateEventDialog now handles the API call internally
+    // Just reload the dashboard data to show the new event
+    loadDashboardData();
   };
 
   return (
