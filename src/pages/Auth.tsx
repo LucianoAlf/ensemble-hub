@@ -26,6 +26,7 @@ const Auth = () => {
 
   useEffect(() => {
     if (!authLoading && user) {
+      console.log("Auth: User detected, redirecting to:", redirectTo);
       navigate(redirectTo, { replace: true });
     }
   }, [authLoading, user, navigate, redirectTo]);
@@ -72,7 +73,11 @@ const Auth = () => {
                 onClick={async () => {
                   setLoading(true);
                   try {
-                    await signInWithGoogle();
+                    console.log("Auth: Iniciando login com Google...");
+                    const { error } = await signInWithGoogle();
+                    if (error) {
+                      console.error("Auth: Erro no login com Google:", error);
+                    }
                   } finally {
                     setLoading(false);
                   }
