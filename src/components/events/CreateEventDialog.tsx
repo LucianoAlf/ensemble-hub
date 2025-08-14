@@ -21,6 +21,7 @@ import {
 import { DatePickerField } from "@/components/forms/DatePickerField";
 import { LocationAutocomplete } from "@/components/forms/LocationAutocomplete";
 import { BandMultiSelect } from "@/components/forms/BandMultiSelect";
+import { TimePickerField } from "@/components/forms/TimePickerField";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { EventItem } from "@/pages/Events";
@@ -189,19 +190,14 @@ export function CreateEventDialog({
               required
             />
 
-            <div className="space-y-2">
-              <Label>
-                Horário
-                <span className="text-destructive ml-1">*</span>
-              </Label>
-              <Input 
-                type="time" 
-                value={time} 
-                onChange={(e) => setTime(e.target.value)} 
-                disabled={isLoading}
-                required 
-              />
-            </div>
+            <TimePickerField
+              label="Horário"
+              value={time}
+              onChange={setTime}
+              placeholder="Selecione um horário"
+              disabled={isLoading}
+              required
+            />
           </div>
 
           <LocationAutocomplete
