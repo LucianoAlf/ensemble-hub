@@ -41,13 +41,22 @@ const Dashboard = () => {
 
   const loadDashboardData = async () => {
     try {
+      console.log('Loading dashboard data...');
+      
       // Load dashboard metrics
       const { data: metrics, error: metricsError } = await supabase
         .rpc('get_dashboard_metrics');
       
-      if (metricsError) throw metricsError;
+      console.log('Dashboard metrics response:', { metrics, metricsError });
+      
+      if (metricsError) {
+        console.error('Metrics error:', metricsError);
+        throw metricsError;
+      }
+      
       if (metrics && typeof metrics === 'object' && !Array.isArray(metrics)) {
         const metricsObj = metrics as Record<string, any>;
+        console.log('Setting metrics:', metricsObj);
         setDashboardMetrics({
           active_bands: Number(metricsObj.active_bands) || 0,
           upcoming_events: Number(metricsObj.upcoming_events) || 0,
@@ -62,10 +71,16 @@ const Dashboard = () => {
         .select('*')
         .limit(4);
       
-      if (eventsError) throw eventsError;
+      console.log('Events response:', { events, eventsError });
+      
+      if (eventsError) {
+        console.error('Events error:', eventsError);
+        throw eventsError;
+      }
       if (events) setUpcomingEvents(events);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      // Keep default values on error
     }
   };
 
@@ -116,10 +131,10 @@ const Dashboard = () => {
       </header>
 
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Bandas Ativas" value={String(dashboardMetrics.active_bands)} icon={<Music2 className="h-4 w-4"/>} />
-        <StatCard title="Próximos Eventos" value={String(dashboardMetrics.upcoming_events)} icon={<CalendarDays className="h-4 w-4"/>} />
-        <StatCard title="Receita Mensal" value={`R$ ${dashboardMetrics.monthly_revenue.toLocaleString('pt-BR')}`} icon={<DollarSign className="h-4 w-4"/>} />
-        <StatCard title="Integrantes" value={String(dashboardMetrics.total_members)} icon={<Users className="h-4 w-4"/>} />
+        <StatCard title="Bandas Ativas" value={String(dashboardMetrics.active_bands || 0)} icon={<Music2 className="h-4 w-4"/>} />
+        <StatCard title="Próximos Eventos" value={String(dashboardMetrics.upcoming_events || 0)} icon={<CalendarDays className="h-4 w-4"/>} />
+        <StatCard title="Receita Mensal" value={`R$ ${(dashboardMetrics.monthly_revenue || 0).toLocaleString('pt-BR')}`} icon={<DollarSign className="h-4 w-4"/>} />
+        <StatCard title="Integrantes" value={String(dashboardMetrics.total_members || 0)} icon={<Users className="h-4 w-4"/>} />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-7">
