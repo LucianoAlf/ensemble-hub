@@ -25,13 +25,20 @@ export function DatePickerField({
   disabled = false,
   required = false,
 }: DatePickerFieldProps) {
+  const [open, setOpen] = React.useState(false);
+
+  const handleDateSelect = (date: Date | undefined) => {
+    onChange(date);
+    setOpen(false);
+  };
+
   return (
     <div className="space-y-2">
       <Label htmlFor="date-picker">
         {label}
         {required && <span className="text-destructive ml-1">*</span>}
       </Label>
-      <Popover>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             id="date-picker"
@@ -54,7 +61,7 @@ export function DatePickerField({
           <Calendar
             mode="single"
             selected={value}
-            onSelect={onChange}
+            onSelect={handleDateSelect}
             disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
             initialFocus
             className="pointer-events-auto"
