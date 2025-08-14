@@ -332,6 +332,42 @@ export type Database = {
       }
     }
     Functions: {
+      create_banda: {
+        Args: {
+          p_descricao?: string
+          p_genero?: string
+          p_logo_url?: string
+          p_nome: string
+        }
+        Returns: {
+          descricao: string
+          genero: string
+          id: string
+          logo_url: string
+          members_count: number
+          nome: string
+        }[]
+      }
+      create_evento: {
+        Args: {
+          p_banda_id?: string
+          p_descricao?: string
+          p_inicio: string
+          p_local?: string
+          p_orcamento?: number
+          p_tipo: string
+          p_titulo: string
+        }
+        Returns: {
+          banda_nome: string
+          id: string
+          inicio: string
+          local: string
+          orcamento: number
+          tipo: string
+          titulo: string
+        }[]
+      }
       get_alunos_participantes: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -342,6 +378,10 @@ export type Database = {
           tenant_id: string | null
           unidade_id: string | null
         }[]
+      }
+      get_dashboard_metrics: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
     }
     Enums: {
