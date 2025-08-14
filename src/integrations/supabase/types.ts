@@ -170,6 +170,27 @@ export type Database = {
           },
         ]
       }
+      evento_banda: {
+        Row: {
+          banda_id: string
+          created_at: string
+          evento_id: string
+          id: string
+        }
+        Insert: {
+          banda_id: string
+          created_at?: string
+          evento_id: string
+          id?: string
+        }
+        Update: {
+          banda_id?: string
+          created_at?: string
+          evento_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
       financeiro: {
         Row: {
           created_at: string | null
@@ -349,17 +370,29 @@ export type Database = {
         }[]
       }
       create_evento: {
-        Args: {
-          p_banda_id?: string
-          p_descricao?: string
-          p_inicio: string
-          p_local?: string
-          p_orcamento?: number
-          p_tipo: string
-          p_titulo: string
-        }
+        Args:
+          | {
+              p_banda_id?: string
+              p_descricao?: string
+              p_inicio: string
+              p_local?: string
+              p_orcamento?: number
+              p_tipo: string
+              p_titulo: string
+            }
+          | {
+              p_banda_ids?: string[]
+              p_descricao?: string
+              p_endereco?: string
+              p_inicio: string
+              p_local?: string
+              p_orcamento?: number
+              p_tipo: string
+              p_titulo: string
+            }
         Returns: {
-          banda_nome: string
+          banda_nomes: string[]
+          endereco: string
           id: string
           inicio: string
           local: string
