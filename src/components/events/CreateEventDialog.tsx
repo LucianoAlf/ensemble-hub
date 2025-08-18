@@ -93,7 +93,7 @@ export function CreateEventDialog({
 
       const { data, error } = await supabase.rpc('create_evento', {
         p_titulo: name,
-        p_tipo: type,
+        p_tipo: mapUiToDbEventType(type),
         p_inicio: eventDateTime.toISOString(),
         p_local: venue,
         p_endereco: address,
@@ -255,4 +255,18 @@ export function CreateEventDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+// Mapeia os tipos da UI para o enum do banco (event_type: "ensaio" | "aula" | "evento")
+function mapUiToDbEventType(uiType: EventItem["type"]): "ensaio" | "aula" | "evento" {
+  switch (uiType) {
+    case "rehearsal":
+      return "ensaio";
+    case "meeting":
+      return "aula";
+    case "recording":
+    case "show":
+    default:
+      return "evento";
+  }
 }

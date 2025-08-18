@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+// Events page - Updated to force cache refresh - Cache cleared
+import { useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Calendar, MapPin, Users, DollarSign, Plus, Search, MoreVertical, Clock } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 import { CreateEventDialog } from "@/components/events/CreateEventDialog";
+import { useToast } from "@/hooks/use-toast";
+import { useSupabaseOptimized } from "@/hooks/useSupabaseOptimized";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export type EventItem = {
   id: string;
@@ -21,31 +26,21 @@ export type EventItem = {
   status?: string;
 };
 
-const initialEvents: EventItem[] = [
-  {
-    id: "1",
-    name: "Show no Blue Note",
-    type: "show",
-    date: new Date(Date.now() + 86400000).toISOString(),
-    venue: "Blue Note",
-    address: "Av. Paulista, 1000 - SP",
-    bandName: "Banda XYZ",
-    budget: 12000,
-    status: "scheduled",
-  },
-  {
-    id: "2",
-    name: "Ensaio Geral",
-    type: "rehearsal",
-    date: new Date(Date.now() + 3 * 86400000).toISOString(),
-    venue: "Estúdio Beat",
-    address: "Rua das Artes, 45 - RJ",
-    bandName: "Banda ABC",
-    budget: 0,
-    status: "scheduled",
-  },
-];
+// Mapeia o enum do banco (evento/ensaio/aula) para os tipos usados na UI
+function mapEventType(dbType: string): EventItem["type"] {
+  switch (dbType) {
+    case "evento":
+      return "show";
+    case "ensaio":
+      return "rehearsal";
+    case "aula":
+      return "meeting";
+    default:
+      return "show";
+  }
+}
 
+// Remove initialEvents and rely on backend
 export default function Events() {
   useSEO({
     title: "Eventos | LA Music Hub",
@@ -53,9 +48,63 @@ export default function Events() {
     canonical: typeof window !== "undefined" ? `${window.location.origin}/events` : undefined,
   });
 
-  const [events, setEvents] = useState<EventItem[]>(initialEvents);
+  const [events, setEvents] = useState<EventItem[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  const { query: querySupabase } = useSupabaseOptimized();
+
+  useEffect(() => {
+    let mounted = true;
+    const controller = new AbortController();
+
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const res = await querySupabase(
+            async ({ client }) =>
+              client
+                .from("vw_eventos_proximos")
+                .select("id, titulo, tipo, inicio, local, endereco, banda_nome, orcamento, descricao, status")
+                .order("inicio", { ascending: true })
+                .abortSignal(controller.signal),
+            {
+              cache: { enabled: true, ttlMs: 60000, key: "events:upcoming" },
+              enableAbortSignal: true,
+            }
+          );
+
+        if (!mounted) return;
+
+        const mapped: EventItem[] = (res?.data || []).map((row: any) => ({
+          id: row.id,
+          name: row.titulo,
+          type: mapEventType(row.tipo),
+          date: row.inicio,
+          venue: row.local ?? "",
+          address: row.endereco ?? undefined,
+          bandName: row.banda_nome ?? undefined,
+          budget: typeof row.orcamento === "number" ? row.orcamento : undefined,
+          description: row.descricao ?? undefined,
+          status: row.status ?? undefined,
+        }));
+        setEvents(mapped);
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+        console.error("Erro ao carregar eventos:", err);
+        toast({ title: "Erro ao carregar eventos", description: "Tente novamente mais tarde.", variant: "destructive" });
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      mounted = false;
+      controller.abort();
+    };
+  }, [querySupabase, toast]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -67,7 +116,7 @@ export default function Events() {
   }, [events, search]);
 
   const handleCreate = (evt: EventItem) => {
-    setEvents((prev) => [{ ...evt, id: String(Date.now()) }, ...prev]);
+    setEvents((prev) => [evt, ...prev]);
   };
 
   return (
@@ -102,60 +151,71 @@ export default function Events() {
           </CardContent>
         </Card>
 
-        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((event) => (
-            <Card key={event.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Calendar className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">{event.name}</CardTitle>
-                      <div className="mt-1 flex items-center gap-2">
-                        <Badge variant="secondary">{labelForType(event.type)}</Badge>
-                        {event.bandName && (
-                          <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                            <Users className="h-3 w-3" /> {event.bandName}
-                          </div>
-                        )}
+        {isLoading ? (
+          <div className="flex justify-center items-center py-12 text-muted-foreground">
+            Carregando eventos...
+          </div>
+        ) : (
+          <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((event) => (
+              <Card key={event.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Calendar className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">{event.name}</CardTitle>
+                        <div className="mt-1 flex items-center gap-2">
+                          <Badge variant="secondary">{labelForType(event.type)}</Badge>
+                          {event.bandName && (
+                            <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <Users className="h-3 w-3" /> {event.bandName}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
+                        <DropdownMenuItem>Editar</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive">Excluir</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
-                      <DropdownMenuItem>Editar</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">Excluir</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  <span>{formatDateTime(event.date)}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  <span>{event.venue}</span>
-                </div>
-                {typeof event.budget === "number" && (
+                </CardHeader>
+                <CardContent className="space-y-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <DollarSign className="h-4 w-4" />
-                    <span>R$ {event.budget.toLocaleString("pt-BR")}</span>
+                    <Clock className="h-4 w-4" />
+                    <span>{formatDateTime(event.date)}</span>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </section>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    <span>{event.venue}</span>
+                  </div>
+                  {typeof event.budget === "number" && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <DollarSign className="h-4 w-4" />
+                      <span>R$ {event.budget.toLocaleString("pt-BR")}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+            {filtered.length === 0 && (
+              <div className="col-span-full text-center text-muted-foreground py-8">
+                Nenhum evento encontrado
+              </div>
+            )}
+          </section>
+        )}
       </main>
 
       <CreateEventDialog open={open} onOpenChange={setOpen} onCreate={handleCreate} />
