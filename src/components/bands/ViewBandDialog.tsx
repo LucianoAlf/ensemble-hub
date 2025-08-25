@@ -22,73 +22,115 @@ interface ViewBandDialogProps {
 interface Banda {
   id: string;
   nome: string;
-  genero: string;
-  influencias: string;
-  instagram: string;
-  descricao: string;
-  anotacoes: string;
-  unidade: string;
+  genero: string | null;
+  descricao: string | null;
+  logo_url: string | null;
+  website: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  youtube: string | null;
+  spotify: string | null;
+  apple_music: string | null;
+  soundcloud: string | null;
+  bandcamp: string | null;
+  tenant_id: string;
+  unidade_id: string | null;
+  ativa: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 interface Integrante {
   id: string;
   nome: string;
   instrumento: string;
-  funcao: string;
-  curso_la: string;
-  telefone: string;
-  email: string;
-  responsavel: string;
-  redes_sociais: string;
+  funcao: string | null;
+  telefone: string | null;
+  email: string | null;
   data_entrada: string;
-  descricao: string;
-  anotacoes: string;
+  data_saida: string | null;
+  ativo: boolean;
+  instagram: string | null;
+  facebook: string | null;
+  youtube: string | null;
+  spotify: string | null;
+  observacoes: string | null;
+  tenant_id: string;
+  banda_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Repertorio {
   id: string;
   titulo: string;
-  artista_original: string;
-  genero: string;
-  duracao: number;
-  tom: string;
-  bpm: number;
+  artista_original: string | null;
+  genero: string | null;
+  duracao_minutos: number | null;
+  tom: string | null;
+  bpm: number | null;
   tipo: string;
   dificuldade: string;
-  observacoes: string;
-  letra: string;
+  observacoes: string | null;
+  letra: string | null;
+  cifra: string | null;
+  arquivo_audio_url: string | null;
+  ativo: boolean;
+  tenant_id: string;
+  banda_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface RiderTecnico {
   id: string;
-  microfones: string;
-  cabos: string;
-  amplificadores: string;
-  direct_box: string;
-  monitores: string;
-  canais_mixer: string;
-  instrumentos: string;
-  tomadas_127v: string;
-  tomadas_220v: string;
-  palco: string;
-  iluminacao: string;
-  camarim: string;
-  estacionamento: string;
-  observacoes: string;
+  nome: string;
+  descricao: string | null;
+  microfones_vocal: number;
+  microfones_instrumento: number;
+  direct_boxes: number;
+  monitores_palco: number;
+  canais_mixer: number;
+  tomadas_110v: number;
+  tomadas_220v: number;
+  extensoes_necessarias: boolean;
+  cobertura_necessaria: boolean;
+  iluminacao_basica: boolean;
+  iluminacao_especial: string | null;
+  camarim_necessario: boolean;
+  estacionamento_necessario: boolean;
+  seguranca_necessaria: boolean;
+  altura_palco_minima: string | null;
+  tamanho_palco_minimo: string | null;
+  equipamentos_especiais: string | null;
+  instrumentos_fornecidos: string | null;
+  amplificadores: string | null;
+  observacoes_gerais: string | null;
+  tenant_id: string;
+  banda_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface MapaPalco {
   id: string;
-  posicao_vocal: string;
-  posicao_guitarra: string;
-  posicao_baixo: string;
-  posicao_bateria: string;
-  posicao_teclado: string;
-  posicao_outros: string;
-  posicao_amplificadores: string;
-  posicao_monitores: string;
-  observacoes: string;
+  nome: string;
+  descricao: string | null;
+  posicao_vocal: string | null;
+  posicao_guitarra: string | null;
+  posicao_baixo: string | null;
+  posicao_bateria: string | null;
+  posicao_teclado: string | null;
+  posicoes_outros: string | null;
+  posicao_amplificadores: string | null;
+  posicao_monitores: string | null;
+  posicao_microfones: string | null;
+  layout_json: any;
+  observacoes: string | null;
+  tenant_id: string;
+  banda_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export function ViewBandDialog({ open, onOpenChange, bandId }: ViewBandDialogProps) {
@@ -215,41 +257,106 @@ export function ViewBandDialog({ open, onOpenChange, bandId }: ViewBandDialogPro
             {/* Aba 1 - Informações da Banda */}
             <TabsContent value="info" className="space-y-4">
               <div className="grid gap-4">
-                <div>
-                  <label className="text-sm font-medium">Unidade</label>
-                  <p className="text-sm text-muted-foreground">{band.unidade}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Gênero</label>
-                  <p className="text-sm text-muted-foreground">{band.genero}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Influências</label>
-                  <p className="text-sm text-muted-foreground">{band.influencias}</p>
-                </div>
-                {band.instagram && (
+                {band.genero && (
                   <div>
-                    <label className="text-sm font-medium">Instagram</label>
+                    <label className="text-sm font-medium">Gênero</label>
+                    <p className="text-sm text-muted-foreground">{band.genero}</p>
+                  </div>
+                )}
+                {band.descricao && (
+                  <div>
+                    <label className="text-sm font-medium">Descrição</label>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{band.descricao}</p>
+                  </div>
+                )}
+                {band.website && (
+                  <div>
+                    <label className="text-sm font-medium">Website</label>
                     <a 
-                      href={band.instagram} 
+                      href={band.website} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-sm text-primary hover:underline"
                     >
-                      {band.instagram}
+                      {band.website}
                     </a>
                   </div>
                 )}
-                <div>
-                  <label className="text-sm font-medium">Descrição</label>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{band.descricao}</p>
-                </div>
-                {band.anotacoes && (
-                  <div>
-                    <label className="text-sm font-medium">Anotações</label>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{band.anotacoes}</p>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Redes Sociais</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {band.instagram && (
+                      <a 
+                        href={band.instagram} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline"
+                      >
+                        Instagram
+                      </a>
+                    )}
+                    {band.facebook && (
+                      <a 
+                        href={band.facebook} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline"
+                      >
+                        Facebook
+                      </a>
+                    )}
+                    {band.youtube && (
+                      <a 
+                        href={band.youtube} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline"
+                      >
+                        YouTube
+                      </a>
+                    )}
+                    {band.spotify && (
+                      <a 
+                        href={band.spotify} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline"
+                      >
+                        Spotify
+                      </a>
+                    )}
+                    {band.apple_music && (
+                      <a 
+                        href={band.apple_music} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline"
+                      >
+                        Apple Music
+                      </a>
+                    )}
+                    {band.soundcloud && (
+                      <a 
+                        href={band.soundcloud} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline"
+                      >
+                        SoundCloud
+                      </a>
+                    )}
+                    {band.bandcamp && (
+                      <a 
+                        href={band.bandcamp} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline"
+                      >
+                        Bandcamp
+                      </a>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </TabsContent>
 
@@ -276,45 +383,84 @@ export function ViewBandDialog({ open, onOpenChange, bandId }: ViewBandDialogPro
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <label className="font-medium">Curso LA:</label>
-                          <p className="text-muted-foreground">{integrante.curso_la}</p>
-                        </div>
-                        <div>
-                          <label className="font-medium">Telefone:</label>
-                          <p className="text-muted-foreground">{integrante.telefone}</p>
-                        </div>
-                        <div>
-                          <label className="font-medium">Email:</label>
-                          <p className="text-muted-foreground">{integrante.email}</p>
-                        </div>
-                        <div>
-                          <label className="font-medium">Responsável:</label>
-                          <p className="text-muted-foreground">{integrante.responsavel}</p>
-                        </div>
+                        {integrante.telefone && (
+                          <div>
+                            <label className="font-medium">Telefone:</label>
+                            <p className="text-muted-foreground">{integrante.telefone}</p>
+                          </div>
+                        )}
+                        {integrante.email && (
+                          <div>
+                            <label className="font-medium">Email:</label>
+                            <p className="text-muted-foreground">{integrante.email}</p>
+                          </div>
+                        )}
                         <div>
                           <label className="font-medium">Data de Entrada:</label>
                           <p className="text-muted-foreground">{formatDate(integrante.data_entrada)}</p>
                         </div>
-                        {integrante.redes_sociais && (
+                        {integrante.data_saida && (
                           <div>
-                            <label className="font-medium">Redes Sociais:</label>
-                            <p className="text-muted-foreground">{integrante.redes_sociais}</p>
+                            <label className="font-medium">Data de Saída:</label>
+                            <p className="text-muted-foreground">{formatDate(integrante.data_saida)}</p>
                           </div>
                         )}
+                        <div>
+                          <label className="font-medium">Status:</label>
+                          <p className="text-muted-foreground">{integrante.ativo ? 'Ativo' : 'Inativo'}</p>
+                        </div>
                       </div>
                       
-                      {integrante.descricao && (
-                        <div>
-                          <label className="font-medium">Descrição:</label>
-                          <p className="text-sm text-muted-foreground">{integrante.descricao}</p>
+                      <div className="space-y-2">
+                        <label className="font-medium">Redes Sociais:</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {integrante.instagram && (
+                            <a 
+                              href={integrante.instagram} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-primary hover:underline"
+                            >
+                              Instagram
+                            </a>
+                          )}
+                          {integrante.facebook && (
+                            <a 
+                              href={integrante.facebook} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-primary hover:underline"
+                            >
+                              Facebook
+                            </a>
+                          )}
+                          {integrante.youtube && (
+                            <a 
+                              href={integrante.youtube} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-primary hover:underline"
+                            >
+                              YouTube
+                            </a>
+                          )}
+                          {integrante.spotify && (
+                            <a 
+                              href={integrante.spotify} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-primary hover:underline"
+                            >
+                              Spotify
+                            </a>
+                          )}
                         </div>
-                      )}
+                      </div>
                       
-                      {integrante.anotacoes && (
+                      {integrante.observacoes && (
                         <div>
-                          <label className="font-medium">Anotações:</label>
-                          <p className="text-sm text-muted-foreground">{integrante.anotacoes}</p>
+                          <label className="font-medium">Observações:</label>
+                          <p className="text-sm text-muted-foreground">{integrante.observacoes}</p>
                         </div>
                       )}
                     </div>
@@ -340,10 +486,12 @@ export function ViewBandDialog({ open, onOpenChange, bandId }: ViewBandDialogPro
                       </div>
                       
                       <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <label className="font-medium">Duração:</label>
-                          <p className="text-muted-foreground">{formatDuration(musica.duracao)}</p>
-                        </div>
+                        {musica.duracao_minutos && (
+                          <div>
+                            <label className="font-medium">Duração:</label>
+                            <p className="text-muted-foreground">{formatDuration(musica.duracao_minutos)}</p>
+                          </div>
+                        )}
                         <div>
                           <label className="font-medium">Tom:</label>
                           <p className="text-muted-foreground">{musica.tom}</p>
@@ -388,74 +536,140 @@ export function ViewBandDialog({ open, onOpenChange, bandId }: ViewBandDialogPro
               {!riderTecnico ? (
                 <p className="text-sm text-muted-foreground">Nenhum rider técnico cadastrado</p>
               ) : (
-                <div className="grid gap-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Microfones</label>
-                      <p className="text-sm text-muted-foreground">{riderTecnico.microfones || 'Não especificado'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Cabos</label>
-                      <p className="text-sm text-muted-foreground">{riderTecnico.cabos || 'Não especificado'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Amplificadores</label>
-                      <p className="text-sm text-muted-foreground">{riderTecnico.amplificadores || 'Não especificado'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Direct Box</label>
-                      <p className="text-sm text-muted-foreground">{riderTecnico.direct_box || 'Não especificado'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Monitores</label>
-                      <p className="text-sm text-muted-foreground">{riderTecnico.monitores || 'Não especificado'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Canais do Mixer</label>
-                      <p className="text-sm text-muted-foreground">{riderTecnico.canais_mixer || 'Não especificado'}</p>
-                    </div>
-                  </div>
-                  
+                <div className="grid gap-6">
                   <div>
-                    <label className="text-sm font-medium">Instrumentos</label>
-                    <p className="text-sm text-muted-foreground">{riderTecnico.instrumentos || 'Não especificado'}</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Tomadas 127V</label>
-                      <p className="text-sm text-muted-foreground">{riderTecnico.tomadas_127v || 'Não especificado'}</p>
+                    <h4 className="font-semibold mb-3">Equipamentos de Áudio</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">Microfones Vocal</label>
+                        <p className="text-sm text-muted-foreground">{riderTecnico.microfones_vocal || 0}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Microfones Instrumento</label>
+                        <p className="text-sm text-muted-foreground">{riderTecnico.microfones_instrumento || 0}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Direct Boxes</label>
+                        <p className="text-sm text-muted-foreground">{riderTecnico.direct_boxes || 0}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Monitores de Palco</label>
+                        <p className="text-sm text-muted-foreground">{riderTecnico.monitores_palco || 0}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Canais do Mixer</label>
+                        <p className="text-sm text-muted-foreground">{riderTecnico.canais_mixer || 0}</p>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium">Tomadas 220V</label>
-                      <p className="text-sm text-muted-foreground">{riderTecnico.tomadas_220v || 'Não especificado'}</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-3">Energia</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">Tomadas 110V</label>
+                        <p className="text-sm text-muted-foreground">{riderTecnico.tomadas_110v || 0}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Tomadas 220V</label>
+                        <p className="text-sm text-muted-foreground">{riderTecnico.tomadas_220v || 0}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Extensões Necessárias</label>
+                        <p className="text-sm text-muted-foreground">{riderTecnico.extensoes_necessarias ? 'Sim' : 'Não'}</p>
+                      </div>
                     </div>
                   </div>
-                  
+
                   <div>
-                    <label className="text-sm font-medium">Palco</label>
-                    <p className="text-sm text-muted-foreground">{riderTecnico.palco || 'Não especificado'}</p>
+                    <h4 className="font-semibold mb-3">Estrutura</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">Cobertura Necessária</label>
+                        <p className="text-sm text-muted-foreground">{riderTecnico.cobertura_necessaria ? 'Sim' : 'Não'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Iluminação Básica</label>
+                        <p className="text-sm text-muted-foreground">{riderTecnico.iluminacao_basica ? 'Sim' : 'Não'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Camarim Necessário</label>
+                        <p className="text-sm text-muted-foreground">{riderTecnico.camarim_necessario ? 'Sim' : 'Não'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Estacionamento Necessário</label>
+                        <p className="text-sm text-muted-foreground">{riderTecnico.estacionamento_necessario ? 'Sim' : 'Não'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Segurança Necessária</label>
+                        <p className="text-sm text-muted-foreground">{riderTecnico.seguranca_necessaria ? 'Sim' : 'Não'}</p>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium">Iluminação</label>
-                    <p className="text-sm text-muted-foreground">{riderTecnico.iluminacao || 'Não especificado'}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium">Camarim</label>
-                    <p className="text-sm text-muted-foreground">{riderTecnico.camarim || 'Não especificado'}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium">Estacionamento</label>
-                    <p className="text-sm text-muted-foreground">{riderTecnico.estacionamento || 'Não especificado'}</p>
-                  </div>
-                  
-                  {riderTecnico.observacoes && (
+
+                  {(riderTecnico.altura_palco_minima || riderTecnico.tamanho_palco_minimo) && (
                     <div>
-                      <label className="text-sm font-medium">Observações</label>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{riderTecnico.observacoes}</p>
+                      <h4 className="font-semibold mb-3">Especificações do Palco</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        {riderTecnico.altura_palco_minima && (
+                          <div>
+                            <label className="text-sm font-medium">Altura Mínima do Palco</label>
+                            <p className="text-sm text-muted-foreground">{riderTecnico.altura_palco_minima}</p>
+                          </div>
+                        )}
+                        {riderTecnico.tamanho_palco_minimo && (
+                          <div>
+                            <label className="text-sm font-medium">Tamanho Mínimo do Palco</label>
+                            <p className="text-sm text-muted-foreground">{riderTecnico.tamanho_palco_minimo}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {(riderTecnico.equipamentos_especiais || riderTecnico.instrumentos_fornecidos || riderTecnico.amplificadores) && (
+                    <div>
+                      <h4 className="font-semibold mb-3">Equipamentos</h4>
+                      <div className="space-y-3">
+                        {riderTecnico.equipamentos_especiais && (
+                          <div>
+                            <label className="text-sm font-medium">Equipamentos Especiais</label>
+                            <p className="text-sm text-muted-foreground">{riderTecnico.equipamentos_especiais}</p>
+                          </div>
+                        )}
+                        {riderTecnico.instrumentos_fornecidos && (
+                          <div>
+                            <label className="text-sm font-medium">Instrumentos Fornecidos</label>
+                            <p className="text-sm text-muted-foreground">{riderTecnico.instrumentos_fornecidos}</p>
+                          </div>
+                        )}
+                        {riderTecnico.amplificadores && (
+                          <div>
+                            <label className="text-sm font-medium">Amplificadores</label>
+                            <p className="text-sm text-muted-foreground">{riderTecnico.amplificadores}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {(riderTecnico.iluminacao_especial || riderTecnico.observacoes_gerais) && (
+                    <div>
+                      <h4 className="font-semibold mb-3">Observações</h4>
+                      <div className="space-y-3">
+                        {riderTecnico.iluminacao_especial && (
+                          <div>
+                            <label className="text-sm font-medium">Iluminação Especial</label>
+                            <p className="text-sm text-muted-foreground">{riderTecnico.iluminacao_especial}</p>
+                          </div>
+                        )}
+                        {riderTecnico.observacoes_gerais && (
+                          <div>
+                            <label className="text-sm font-medium">Observações Gerais</label>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{riderTecnico.observacoes_gerais}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -497,7 +711,7 @@ export function ViewBandDialog({ open, onOpenChange, bandId }: ViewBandDialogPro
                       </div>
                       <div>
                         <label className="font-medium">Posição Outros</label>
-                        <p className="text-muted-foreground">{mapaPalco.posicao_outros || 'Não especificado'}</p>
+                        <p className="text-muted-foreground">{mapaPalco.posicoes_outros || 'Não especificado'}</p>
                       </div>
                       <div>
                         <label className="font-medium">Posição Amplificadores</label>
