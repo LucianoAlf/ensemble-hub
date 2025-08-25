@@ -66,6 +66,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log("Iniciando autenticação Google...");
       
+      // Verificação segura de iframe
+      try {
+        if (window !== window.top) {
+          console.warn("App detectado em iframe, usando fallback...");
+          toast("Redirecionamento necessário", { 
+            description: "Por favor, abra o app em uma nova aba para fazer login com Google." 
+          });
+          // Abrir em nova aba como fallback
+          const newWindow = window.open(window.location.href, '_blank');
+          if (newWindow) {
+            return { error: null };
+          }
+        }
+      } catch (e) {
+        // Ignora erro de segurança na verificação de iframe
+        console.log("Verificação de iframe ignorada devido a restrições de segurança");
+      }
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -83,12 +101,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error: error as any };
       }
 
-      // CRÍTICO: Forçar redirecionamento na janela principal
+      // Redirecionamento seguro
       if (data?.url) {
         console.log("Redirecionando para:", data.url);
-        window.location.href = data.url;
-        // Retornar imediatamente para evitar qualquer processamento adicional
-        return { data, error: null };
+        try {
+          window.location.href = data.url;
+          return { data, error: null };
+        } catch (redirectError) {
+          console.error("Erro no redirecionamento direto:", redirectError);
+          // Fallback: abrir em nova aba
+          const newWindow = window.open(data.url, '_blank');
+          if (newWindow) {
+            toast("Redirecionamento", { description: "Login aberto em nova aba." });
+            return { data, error: null };
+          } else {
+            toast("Erro no redirecionamento", { 
+              description: "Por favor, permita pop-ups para este site." 
+            });
+            return { error: new Error("Redirecionamento bloqueado") as any };
+          }
+        }
       }
       
       return { error: null };
