@@ -69,48 +69,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          skipBrowserRedirect: false, // Força redirect na mesma janela
+          redirectTo: `${window.location.origin}/dashboard`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
-          },
-          redirectTo: `${window.location.origin}/dashboard`,
-        },
+          }
+        }
       });
 
       if (error) {
-        console.error("Erro na autenticação Google:", error);
-        
-        // Tratamento específico para diferentes tipos de erro
-        if (error.message.includes("invalid_request") || error.message.includes("requested path is invalid")) {
-          toast("Erro de configuração", { 
-            description: "Verifique se o domínio ensemble-hub.lovable.app está configurado no Google Cloud Console e Supabase." 
-          });
-        } else {
-          toast("Erro no login com Google", { description: error.message });
-        }
+        console.error("Erro no OAuth:", error);
+        toast("Erro no login com Google", { description: error.message });
         return { error: error as any };
       }
 
-      console.log("Redirecionamento para Google iniciado:", data);
-      
-      // Forçar redirect manual se necessário
+      // CRÍTICO: Forçar redirecionamento na janela principal
       if (data?.url) {
-        console.log("Redirecionando manualmente para:", data.url);
+        console.log("Redirecionando para:", data.url);
         window.location.href = data.url;
+        // Retornar imediatamente para evitar qualquer processamento adicional
+        return { data, error: null };
       }
       
-      toast("Redirecionando para Google...", { 
-        description: "Você será redirecionado para completar a autenticação." 
-      });
-      
       return { error: null };
-    } catch (unexpectedError) {
-      console.error("Erro inesperado na autenticação Google:", unexpectedError);
-      toast("Erro inesperado", { 
-        description: "Ocorreu um erro inesperado. Tente novamente." 
-      });
-      return { error: unexpectedError as any };
+    } catch (error) {
+      console.error("Erro ao fazer login com Google:", error);
+      toast("Erro inesperado", { description: "Tente novamente." });
+      return { error: error as any };
     }
   };
 
