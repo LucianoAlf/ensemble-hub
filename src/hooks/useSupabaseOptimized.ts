@@ -53,5 +53,18 @@ export function useSupabaseOptimized() {
     []
   );
 
-  return { query };
+  const mutate = useCallback(
+    async <T>(
+      mutateFn: (context: QueryContext) => Promise<{ data: T; error: any }>
+    ): Promise<{ data: T; error: any }> => {
+      try {
+        return await mutateFn({ client: supabase });
+      } catch (error) {
+        return { data: null as any, error };
+      }
+    },
+    []
+  );
+
+  return { query, mutate, supabase };
 }

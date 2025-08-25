@@ -10,7 +10,7 @@ import { useSEO } from "@/hooks/useSEO";
 import { CreateEventDialog } from "@/components/events/CreateEventDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseOptimized } from "@/hooks/useSupabaseOptimized";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export type EventItem = {

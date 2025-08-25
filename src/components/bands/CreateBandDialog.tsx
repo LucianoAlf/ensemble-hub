@@ -96,8 +96,7 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
   const [riderTecnico, setRiderTecnico] = useState<RiderTecnico>({ microfones: "", cabos: "", amplificadores: "", direct_box: "", monitores: "", canais_mixer: "", instrumentos: "", tomadas: "", palco: "", iluminacao: "", camarim: "", estacionamento: "", observacoes: "" });
   const [mapaPalco, setMapaPalco] = useState<MapaPalco>({ posicao_vocal: "", posicao_guitarra: "", posicao_baixo: "", posicao_bateria: "", posicao_teclado: "", posicao_outros: "", posicao_amplificadores: "", posicao_monitores: "", observacoes: "" });
   const [unidades, setUnidades] = useState<Unidade[]>([]);
-  const { supabase, mutate } = useSupabaseOptimized();
-  const client = supabase || supabaseClient;
+  const { supabase: client, mutate } = useSupabaseOptimized();
   // Carregar unidades ao abrir o diálogo
   useEffect(() => {
     const loadUnidades = async () => {
@@ -172,7 +171,7 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
       return;
     }
 
-    const client = supabase || supabaseClient;
+    const client = supabase;
     
     if (!client) {
       console.error('Supabase client não está disponível');
