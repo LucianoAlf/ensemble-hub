@@ -63,18 +63,48 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signInWithGoogle: AuthContextValue["signInWithGoogle"] = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-      },
-    });
-    if (error) {
-      toast("Erro no login com Google", { description: error.message });
-    } else {
-      toast("Redirecionando para Google...", { description: "Conclua a autenticação." });
+    try {
+      console.log("Iniciando autenticação Google...");
+      
+      // Usar URL base sem especificar redirectTo inicialmente para evitar conflitos
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) {
+        console.error("Erro na autenticação Google:", error);
+        
+        // Tratamento específico para diferentes tipos de erro
+        if (error.message.includes("invalid_request") || error.message.includes("requested path is invalid")) {
+          toast("Erro de configuração", { 
+            description: "Problema na configuração do Google OAuth. Verifique as URLs no Supabase." 
+          });
+        } else {
+          toast("Erro no login com Google", { description: error.message });
+        }
+        return { error: error as any };
+      }
+
+      console.log("Redirecionamento para Google iniciado:", data);
+      toast("Redirecionando para Google...", { 
+        description: "Você será redirecionado para completar a autenticação." 
+      });
+      
+      return { error: null };
+    } catch (unexpectedError) {
+      console.error("Erro inesperado na autenticação Google:", unexpectedError);
+      toast("Erro inesperado", { 
+        description: "Ocorreu um erro inesperado. Tente novamente." 
+      });
+      return { error: unexpectedError as any };
     }
-    return { error: error as any };
   };
 
   const signOut: AuthContextValue["signOut"] = async () => {
