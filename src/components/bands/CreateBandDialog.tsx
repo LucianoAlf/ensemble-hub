@@ -39,6 +39,20 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
 
     setIsLoading(true);
     try {
+      console.log('Iniciando criação de banda com dados:', {
+        nome: bandInfo.nome,
+        genero: bandInfo.genero,
+        descricao: bandInfo.descricao
+      });
+
+      // Verificar se usuário tem tenant_id
+      const { data: session } = await client.auth.getSession();
+      if (!session?.session?.user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      console.log('Usuário autenticado:', session.session.user.id);
+
       // Criar banda via função RPC para preencher tenant_id automaticamente
       const { data: rpcData, error: bandError } = await client.rpc('create_banda', {
         p_nome: bandInfo.nome,
@@ -47,13 +61,26 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
         p_logo_url: null
       });
 
-      if (bandError) throw bandError;
+      console.log('Resposta RPC create_banda:', { data: rpcData, error: bandError });
+
+      if (bandError) {
+        console.error('Erro RPC detalhado:', {
+          message: bandError.message,
+          details: bandError.details,
+          hint: bandError.hint,
+          code: bandError.code
+        });
+        throw bandError;
+      }
 
       const bandData = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+      console.log('Dados da banda processados:', bandData);
+
       if (!bandData || !bandData.id) {
         throw new Error('Falha ao criar banda: resposta inválida do servidor');
       }
 
+      console.log('Banda criada com sucesso:', bandData);
       toast.success("Banda criada com sucesso!");
       onBandCreated(bandData);
       onOpenChange(false);
@@ -65,8 +92,24 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
         descricao: ""
       });
     } catch (error: any) {
-      console.error('Erro ao criar banda:', error);
-      toast.error(error.message || "Erro ao criar banda");
+      console.error('Erro detalhado ao criar banda:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        stack: error.stack
+      });
+      
+      let errorMessage = "Erro ao criar banda";
+      if (error.message?.includes('tenant_id')) {
+        errorMessage = "Erro de configuração do usuário. Entre em contato com o suporte.";
+      } else if (error.message?.includes('permission')) {
+        errorMessage = "Você não tem permissão para criar bandas.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
