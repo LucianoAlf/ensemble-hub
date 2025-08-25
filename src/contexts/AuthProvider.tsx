@@ -63,72 +63,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signInWithGoogle: AuthContextValue["signInWithGoogle"] = async () => {
-    try {
-      console.log("Iniciando autenticação Google...");
-      
-      // Verificação segura de iframe
-      try {
-        if (window !== window.top) {
-          console.warn("App detectado em iframe, usando fallback...");
-          toast("Redirecionamento necessário", { 
-            description: "Por favor, abra o app em uma nova aba para fazer login com Google." 
-          });
-          // Abrir em nova aba como fallback
-          const newWindow = window.open(window.location.href, '_blank');
-          if (newWindow) {
-            return { error: null };
-          }
-        }
-      } catch (e) {
-        // Ignora erro de segurança na verificação de iframe
-        console.log("Verificação de iframe ignorada devido a restrições de segurança");
-      }
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
-        }
-      });
-
-      if (error) {
-        console.error("Erro no OAuth:", error);
-        toast("Erro no login com Google", { description: error.message });
-        return { error: error as any };
-      }
-
-      // Redirecionamento seguro
-      if (data?.url) {
-        console.log("Redirecionando para:", data.url);
-        try {
-          window.location.href = data.url;
-          return { data, error: null };
-        } catch (redirectError) {
-          console.error("Erro no redirecionamento direto:", redirectError);
-          // Fallback: abrir em nova aba
-          const newWindow = window.open(data.url, '_blank');
-          if (newWindow) {
-            toast("Redirecionamento", { description: "Login aberto em nova aba." });
-            return { data, error: null };
-          } else {
-            toast("Erro no redirecionamento", { 
-              description: "Por favor, permita pop-ups para este site." 
-            });
-            return { error: new Error("Redirecionamento bloqueado") as any };
-          }
-        }
-      }
-      
-      return { error: null };
-    } catch (error) {
-      console.error("Erro ao fazer login com Google:", error);
-      toast("Erro inesperado", { description: "Tente novamente." });
-      return { error: error as any };
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+    if (error) {
+      toast("Erro no login com Google", { description: error.message });
+    } else {
+      toast("Redirecionando para Google...", { description: "Conclua a autenticação." });
     }
+    return { error: error as any };
   };
 
   const signOut: AuthContextValue["signOut"] = async () => {
