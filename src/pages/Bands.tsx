@@ -183,7 +183,7 @@ const Bands = () => {
         open={editOpen} 
         onOpenChange={setEditOpen} 
         band={selectedBand} 
-        onUpdate={handleUpdateBand} 
+        onBandUpdated={handleUpdateBand} 
       />
     </main>
   );
