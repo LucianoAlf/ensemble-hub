@@ -16,42 +16,258 @@ export type Database = {
     Tables: {
       banda: {
         Row: {
+          apple_music: string | null
           ativa: boolean | null
+          bandcamp: string | null
           created_at: string | null
           descricao: string | null
+          facebook: string | null
           genero: string | null
           id: string
+          instagram: string | null
           logo_url: string | null
           nome: string
+          soundcloud: string | null
+          spotify: string | null
           tenant_id: string
           unidade_id: string | null
           updated_at: string | null
+          website: string | null
+          youtube: string | null
         }
         Insert: {
+          apple_music?: string | null
           ativa?: boolean | null
+          bandcamp?: string | null
           created_at?: string | null
           descricao?: string | null
+          facebook?: string | null
           genero?: string | null
           id?: string
+          instagram?: string | null
           logo_url?: string | null
           nome: string
+          soundcloud?: string | null
+          spotify?: string | null
           tenant_id: string
           unidade_id?: string | null
           updated_at?: string | null
+          website?: string | null
+          youtube?: string | null
         }
         Update: {
+          apple_music?: string | null
           ativa?: boolean | null
+          bandcamp?: string | null
           created_at?: string | null
           descricao?: string | null
+          facebook?: string | null
           genero?: string | null
           id?: string
+          instagram?: string | null
           logo_url?: string | null
           nome?: string
+          soundcloud?: string | null
+          spotify?: string | null
           tenant_id?: string
           unidade_id?: string | null
           updated_at?: string | null
+          website?: string | null
+          youtube?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_banda_unidade"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "unidade"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      banda_integrante: {
+        Row: {
+          ativo: boolean | null
+          banda_id: string
+          created_at: string | null
+          data_entrada: string
+          data_saida: string | null
+          email: string | null
+          facebook: string | null
+          funcao: string | null
+          id: string
+          instagram: string | null
+          instrumento: string
+          nome: string
+          observacoes: string | null
+          spotify: string | null
+          telefone: string | null
+          tenant_id: string
+          updated_at: string | null
+          youtube: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          banda_id: string
+          created_at?: string | null
+          data_entrada?: string
+          data_saida?: string | null
+          email?: string | null
+          facebook?: string | null
+          funcao?: string | null
+          id?: string
+          instagram?: string | null
+          instrumento: string
+          nome: string
+          observacoes?: string | null
+          spotify?: string | null
+          telefone?: string | null
+          tenant_id: string
+          updated_at?: string | null
+          youtube?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          banda_id?: string
+          created_at?: string | null
+          data_entrada?: string
+          data_saida?: string | null
+          email?: string | null
+          facebook?: string | null
+          funcao?: string | null
+          id?: string
+          instagram?: string | null
+          instrumento?: string
+          nome?: string
+          observacoes?: string | null
+          spotify?: string | null
+          telefone?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+          youtube?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banda_integrante_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banda_integrante_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_banda_integrante_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_banda_integrante_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      banda_mapa_palco: {
+        Row: {
+          banda_id: string
+          created_at: string | null
+          descricao: string | null
+          id: string
+          layout_json: Json | null
+          nome: string
+          observacoes: string | null
+          posicao_amplificadores: string | null
+          posicao_baixo: string | null
+          posicao_bateria: string | null
+          posicao_guitarra: string | null
+          posicao_microfones: string | null
+          posicao_monitores: string | null
+          posicao_teclado: string | null
+          posicao_vocal: string | null
+          posicoes_outros: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          banda_id: string
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          layout_json?: Json | null
+          nome?: string
+          observacoes?: string | null
+          posicao_amplificadores?: string | null
+          posicao_baixo?: string | null
+          posicao_bateria?: string | null
+          posicao_guitarra?: string | null
+          posicao_microfones?: string | null
+          posicao_monitores?: string | null
+          posicao_teclado?: string | null
+          posicao_vocal?: string | null
+          posicoes_outros?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          banda_id?: string
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          layout_json?: Json | null
+          nome?: string
+          observacoes?: string | null
+          posicao_amplificadores?: string | null
+          posicao_baixo?: string | null
+          posicao_bateria?: string | null
+          posicao_guitarra?: string | null
+          posicao_microfones?: string | null
+          posicao_monitores?: string | null
+          posicao_teclado?: string | null
+          posicao_vocal?: string | null
+          posicoes_outros?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banda_mapa_palco_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banda_mapa_palco_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_banda_mapa_palco_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_banda_mapa_palco_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       banda_membro: {
         Row: {
@@ -94,6 +310,316 @@ export type Database = {
             columns: ["banda_id"]
             isOneToOne: false
             referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      banda_repertorio: {
+        Row: {
+          arquivo_audio_url: string | null
+          artista_original: string | null
+          ativo: boolean | null
+          banda_id: string
+          bpm: number | null
+          cifra: string | null
+          created_at: string | null
+          dificuldade: string | null
+          duracao_minutos: number | null
+          genero: string | null
+          id: string
+          letra: string | null
+          observacoes: string | null
+          tenant_id: string
+          tipo: string | null
+          titulo: string
+          tom: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          arquivo_audio_url?: string | null
+          artista_original?: string | null
+          ativo?: boolean | null
+          banda_id: string
+          bpm?: number | null
+          cifra?: string | null
+          created_at?: string | null
+          dificuldade?: string | null
+          duracao_minutos?: number | null
+          genero?: string | null
+          id?: string
+          letra?: string | null
+          observacoes?: string | null
+          tenant_id: string
+          tipo?: string | null
+          titulo: string
+          tom?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          arquivo_audio_url?: string | null
+          artista_original?: string | null
+          ativo?: boolean | null
+          banda_id?: string
+          bpm?: number | null
+          cifra?: string | null
+          created_at?: string | null
+          dificuldade?: string | null
+          duracao_minutos?: number | null
+          genero?: string | null
+          id?: string
+          letra?: string | null
+          observacoes?: string | null
+          tenant_id?: string
+          tipo?: string | null
+          titulo?: string
+          tom?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banda_repertorio_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banda_repertorio_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_banda_repertorio_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_banda_repertorio_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      banda_rider_tecnico: {
+        Row: {
+          altura_palco_minima: string | null
+          amplificadores: string | null
+          banda_id: string
+          camarim_necessario: boolean | null
+          canais_mixer: number | null
+          cobertura_necessaria: boolean | null
+          created_at: string | null
+          descricao: string | null
+          direct_boxes: number | null
+          equipamentos_especiais: string | null
+          estacionamento_necessario: boolean | null
+          extensoes_necessarias: boolean | null
+          id: string
+          iluminacao_basica: boolean | null
+          iluminacao_especial: string | null
+          instrumentos_fornecidos: string | null
+          microfones_instrumento: number | null
+          microfones_vocal: number | null
+          monitores_palco: number | null
+          nome: string
+          observacoes_gerais: string | null
+          seguranca_necessaria: boolean | null
+          tamanho_palco_minimo: string | null
+          tenant_id: string
+          tomadas_110v: number | null
+          tomadas_220v: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          altura_palco_minima?: string | null
+          amplificadores?: string | null
+          banda_id: string
+          camarim_necessario?: boolean | null
+          canais_mixer?: number | null
+          cobertura_necessaria?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          direct_boxes?: number | null
+          equipamentos_especiais?: string | null
+          estacionamento_necessario?: boolean | null
+          extensoes_necessarias?: boolean | null
+          id?: string
+          iluminacao_basica?: boolean | null
+          iluminacao_especial?: string | null
+          instrumentos_fornecidos?: string | null
+          microfones_instrumento?: number | null
+          microfones_vocal?: number | null
+          monitores_palco?: number | null
+          nome?: string
+          observacoes_gerais?: string | null
+          seguranca_necessaria?: boolean | null
+          tamanho_palco_minimo?: string | null
+          tenant_id: string
+          tomadas_110v?: number | null
+          tomadas_220v?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          altura_palco_minima?: string | null
+          amplificadores?: string | null
+          banda_id?: string
+          camarim_necessario?: boolean | null
+          canais_mixer?: number | null
+          cobertura_necessaria?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          direct_boxes?: number | null
+          equipamentos_especiais?: string | null
+          estacionamento_necessario?: boolean | null
+          extensoes_necessarias?: boolean | null
+          id?: string
+          iluminacao_basica?: boolean | null
+          iluminacao_especial?: string | null
+          instrumentos_fornecidos?: string | null
+          microfones_instrumento?: number | null
+          microfones_vocal?: number | null
+          monitores_palco?: number | null
+          nome?: string
+          observacoes_gerais?: string | null
+          seguranca_necessaria?: boolean | null
+          tamanho_palco_minimo?: string | null
+          tenant_id?: string
+          tomadas_110v?: number | null
+          tomadas_220v?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banda_rider_tecnico_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banda_rider_tecnico_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_banda_rider_tecnico_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_banda_rider_tecnico_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      banda_setlist: {
+        Row: {
+          ativo: boolean | null
+          banda_id: string
+          created_at: string | null
+          data_criacao: string | null
+          descricao: string | null
+          duracao_total_minutos: number | null
+          id: string
+          nome: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          banda_id: string
+          created_at?: string | null
+          data_criacao?: string | null
+          descricao?: string | null
+          duracao_total_minutos?: number | null
+          id?: string
+          nome: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          banda_id?: string
+          created_at?: string | null
+          data_criacao?: string | null
+          descricao?: string | null
+          duracao_total_minutos?: number | null
+          id?: string
+          nome?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banda_setlist_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banda_setlist_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      banda_setlist_musica: {
+        Row: {
+          created_at: string | null
+          id: string
+          observacoes: string | null
+          ordem: number
+          repertorio_id: string
+          setlist_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          observacoes?: string | null
+          ordem: number
+          repertorio_id: string
+          setlist_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          observacoes?: string | null
+          ordem?: number
+          repertorio_id?: string
+          setlist_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banda_setlist_musica_repertorio_id_fkey"
+            columns: ["repertorio_id"]
+            isOneToOne: false
+            referencedRelation: "banda_repertorio"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banda_setlist_musica_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "banda_setlist"
             referencedColumns: ["id"]
           },
         ]
@@ -168,6 +694,27 @@ export type Database = {
             referencedRelation: "vw_bandas_lista"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_evento_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_unidade"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "unidade"
+            referencedColumns: ["id"]
+          },
         ]
       }
       evento_banda: {
@@ -189,7 +736,64 @@ export type Database = {
           evento_id?: string
           id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_evento_banda_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_banda_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_banda_banda_id"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_banda_banda_id"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_banda_evento"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "evento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_banda_evento"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_eventos_proximos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_banda_evento_id"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "evento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_banda_evento_id"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_eventos_proximos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financeiro: {
         Row: {
@@ -263,6 +867,30 @@ export type Database = {
         }
         Relationships: []
       }
+      unidade: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       vw_alunos_participantes: {
@@ -282,7 +910,15 @@ export type Database = {
           total_ativas: number | null
           unidade_id: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_banda_unidade"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "unidade"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vw_bandas_lista: {
         Row: {
@@ -297,7 +933,15 @@ export type Database = {
           tenant_id: string | null
           unidade_id: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_banda_unidade"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "unidade"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vw_eventos_proximos: {
         Row: {
@@ -333,6 +977,27 @@ export type Database = {
             referencedRelation: "vw_bandas_lista"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_evento_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_unidade"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "unidade"
+            referencedColumns: ["id"]
+          },
         ]
       }
       vw_proximos_eventos: {
@@ -341,7 +1006,15 @@ export type Database = {
           total_proximos: number | null
           unidade_id: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_evento_unidade"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "unidade"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vw_total_alunos: {
         Row: {

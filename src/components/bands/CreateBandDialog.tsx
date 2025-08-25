@@ -9,10 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
 import { useSupabaseOptimized } from "@/hooks/useSupabaseOptimized";
-import { supabase as supabaseClient } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-console.log('CreateBandDialog component loaded');
 
 interface CreateBandDialogProps {
   open: boolean;
@@ -31,54 +28,66 @@ interface Integrante {
   nome: string;
   instrumento: string;
   funcao: string;
-  curso: string;
   telefone: string;
   email: string;
-  responsavel: boolean;
   instagram: string;
-  data_entrada: string;
-  descricao: string;
-  anotacoes: string;
+  facebook: string;
+  youtube: string;
+  spotify: string;
+  observacoes: string;
 }
 
 interface Repertorio {
   titulo: string;
   artista_original: string;
   genero: string;
-  duracao: string;
+  duracao_minutos: number;
   tom: string;
-  bpm: string;
+  bpm: number;
   tipo: string;
   dificuldade: string;
   observacoes: string;
   letra: string;
+  cifra: string;
 }
 
 interface RiderTecnico {
-  microfones: string;
-  cabos: string;
+  nome: string;
+  descricao: string;
+  microfones_vocal: number;
+  microfones_instrumento: number;
+  direct_boxes: number;
+  monitores_palco: number;
+  canais_mixer: number;
+  tomadas_220v: number;
+  tomadas_110v: number;
+  extensoes_necessarias: boolean;
+  cobertura_necessaria: boolean;
+  iluminacao_basica: boolean;
+  iluminacao_especial: string;
+  altura_palco_minima: string;
+  tamanho_palco_minimo: string;
+  equipamentos_especiais: string;
+  instrumentos_fornecidos: string;
   amplificadores: string;
-  direct_box: string;
-  monitores: string;
-  canais_mixer: string;
-  instrumentos: string;
-  tomadas: string;
-  palco: string;
-  iluminacao: string;
-  camarim: string;
-  estacionamento: string;
-  observacoes: string;
+  camarim_necessario: boolean;
+  estacionamento_necessario: boolean;
+  seguranca_necessaria: boolean;
+  observacoes_gerais: string;
 }
 
 interface MapaPalco {
+  nome: string;
+  descricao: string;
   posicao_vocal: string;
   posicao_guitarra: string;
   posicao_baixo: string;
   posicao_bateria: string;
   posicao_teclado: string;
-  posicao_outros: string;
-  posicao_amplificadores: string;
+  posicao_microfones: string;
   posicao_monitores: string;
+  posicao_amplificadores: string;
+  posicoes_outros: string;
   observacoes: string;
 }
 
@@ -91,12 +100,72 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
   const [activeTab, setActiveTab] = useState("info");
   const [isLoading, setIsLoading] = useState(false);
   const [bandInfo, setBandInfo] = useState<BandInfo>({ unidade: "", nome: "", genero: "", descricao: "" });
-  const [integrantes, setIntegrantes] = useState<Integrante[]>([{ nome: "", instrumento: "", funcao: "", curso: "", telefone: "", email: "", responsavel: false, instagram: "", data_entrada: "", descricao: "", anotacoes: "" }]);
-  const [repertorios, setRepertorios] = useState<Repertorio[]>([{ titulo: "", artista_original: "", genero: "", duracao: "", tom: "", bpm: "", tipo: "", dificuldade: "", observacoes: "", letra: "" }]);
-  const [riderTecnico, setRiderTecnico] = useState<RiderTecnico>({ microfones: "", cabos: "", amplificadores: "", direct_box: "", monitores: "", canais_mixer: "", instrumentos: "", tomadas: "", palco: "", iluminacao: "", camarim: "", estacionamento: "", observacoes: "" });
-  const [mapaPalco, setMapaPalco] = useState<MapaPalco>({ posicao_vocal: "", posicao_guitarra: "", posicao_baixo: "", posicao_bateria: "", posicao_teclado: "", posicao_outros: "", posicao_amplificadores: "", posicao_monitores: "", observacoes: "" });
+  const [integrantes, setIntegrantes] = useState<Integrante[]>([{
+    nome: "",
+    instrumento: "",
+    funcao: "",
+    telefone: "",
+    email: "",
+    instagram: "",
+    facebook: "",
+    youtube: "",
+    spotify: "",
+    observacoes: ""
+  }]);
+  const [repertorio, setRepertorio] = useState<Repertorio[]>([{
+    titulo: "",
+    artista_original: "",
+    genero: "",
+    duracao_minutos: 0,
+    tom: "",
+    bpm: 0,
+    tipo: "cover",
+    dificuldade: "medio",
+    observacoes: "",
+    letra: "",
+    cifra: ""
+  }]);
+  const [riderTecnico, setRiderTecnico] = useState<RiderTecnico>({
+    nome: "Rider Técnico",
+    descricao: "",
+    microfones_vocal: 0,
+    microfones_instrumento: 0,
+    direct_boxes: 0,
+    monitores_palco: 0,
+    canais_mixer: 0,
+    tomadas_220v: 0,
+    tomadas_110v: 0,
+    extensoes_necessarias: false,
+    cobertura_necessaria: false,
+    iluminacao_basica: true,
+    iluminacao_especial: "",
+    altura_palco_minima: "",
+    tamanho_palco_minimo: "",
+    equipamentos_especiais: "",
+    instrumentos_fornecidos: "",
+    amplificadores: "",
+    camarim_necessario: false,
+    estacionamento_necessario: false,
+    seguranca_necessaria: false,
+    observacoes_gerais: ""
+  });
+  const [mapaPalco, setMapaPalco] = useState<MapaPalco>({
+    nome: "Mapa de Palco",
+    descricao: "",
+    posicao_vocal: "",
+    posicao_guitarra: "",
+    posicao_baixo: "",
+    posicao_bateria: "",
+    posicao_teclado: "",
+    posicao_microfones: "",
+    posicao_monitores: "",
+    posicao_amplificadores: "",
+    posicoes_outros: "",
+    observacoes: ""
+  });
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const { supabase: client, mutate } = useSupabaseOptimized();
+
   // Carregar unidades ao abrir o diálogo
   useEffect(() => {
     const loadUnidades = async () => {
@@ -109,20 +178,20 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
       }
     };
     if (open) loadUnidades();
-  }, [open]);
+  }, [open, client]);
+
   const addIntegrante = () => {
     setIntegrantes([...integrantes, {
       nome: "",
       instrumento: "",
       funcao: "",
-      curso: "",
       telefone: "",
       email: "",
-      responsavel: false,
       instagram: "",
-      data_entrada: "",
-      descricao: "",
-      anotacoes: ""
+      facebook: "",
+      youtube: "",
+      spotify: "",
+      observacoes: ""
     }]);
   };
 
@@ -139,30 +208,31 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
   };
 
   const addRepertorio = () => {
-    setRepertorios([...repertorios, {
+    setRepertorio([...repertorio, {
       titulo: "",
       artista_original: "",
       genero: "",
-      duracao: "",
+      duracao_minutos: 0,
       tom: "",
-      bpm: "",
-      tipo: "",
-      dificuldade: "",
+      bpm: 0,
+      tipo: "cover",
+      dificuldade: "medio",
       observacoes: "",
-      letra: ""
+      letra: "",
+      cifra: ""
     }]);
   };
 
   const removeRepertorio = (index: number) => {
-    if (repertorios.length > 1) {
-      setRepertorios(repertorios.filter((_, i) => i !== index));
+    if (repertorio.length > 1) {
+      setRepertorio(repertorio.filter((_, i) => i !== index));
     }
   };
 
-  const updateRepertorio = (index: number, field: keyof Repertorio, value: string) => {
-    const updated = [...repertorios];
+  const updateRepertorio = (index: number, field: keyof Repertorio, value: any) => {
+    const updated = [...repertorio];
     updated[index] = { ...updated[index], [field]: value };
-    setRepertorios(updated);
+    setRepertorio(updated);
   };
 
   const handleSubmit = async () => {
@@ -171,18 +241,9 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
       return;
     }
 
-    const client = supabase;
-    
-    if (!client) {
-      console.error('Supabase client não está disponível');
-      toast.error("Erro de conexão com o banco de dados");
-      return;
-    }
-
     setIsLoading(true);
     try {
-      // Criar banda
-      // Criar banda via função RPC para preencher tenant_id automaticamente e evitar problemas de UUID
+      // Criar banda via função RPC para preencher tenant_id automaticamente
       const { data: rpcData, error: bandError } = await client.rpc('create_banda', {
         p_nome: bandInfo.nome,
         p_genero: bandInfo.genero || null,
@@ -199,6 +260,18 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
 
       const bandaId = bandData.id;
 
+      // Obter tenant_id do usuário
+      const { data: profile } = await client
+        .from('profiles')
+        .select('tenant_id')
+        .single();
+
+      if (!profile?.tenant_id) {
+        throw new Error('Tenant ID não encontrado');
+      }
+
+      const tenantId = profile.tenant_id;
+
       // Se uma unidade foi selecionada, associar à banda
       if (bandInfo.unidade) {
         const { error: unidadeUpdateError } = await client
@@ -212,102 +285,181 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
       if (integrantes.some(i => i.nome.trim())) {
         const integrantesData = integrantes
           .filter(i => i.nome.trim())
-          .map(i => ({ ...i, banda_id: bandaId }));
-        
+          .map(i => ({
+            banda_id: bandaId,
+            tenant_id: tenantId,
+            nome: i.nome,
+            email: i.email || null,
+            telefone: i.telefone || null,
+            instrumento: i.instrumento || "Não especificado",
+            funcao: i.funcao || null,
+            instagram: i.instagram || null,
+            facebook: i.facebook || null,
+            youtube: i.youtube || null,
+            spotify: i.spotify || null,
+            observacoes: i.observacoes || null,
+            data_entrada: new Date().toISOString().split('T')[0]
+          }));
+
         const { error: integrantesError } = await client
           .from('banda_integrante')
           .insert(integrantesData);
-        
+
         if (integrantesError) throw integrantesError;
       }
 
-      // Inserir repertórios
-      if (repertorios.some(r => r.titulo.trim())) {
-        const repertoriosData = repertorios
+      // Inserir repertório
+      if (repertorio.some(r => r.titulo.trim())) {
+        const repertorioData = repertorio
           .filter(r => r.titulo.trim())
-          .map(r => ({ ...r, banda_id: bandaId }));
-        
-        const { error: repertoriosError } = await client
+          .map(r => ({
+            banda_id: bandaId,
+            tenant_id: tenantId,
+            titulo: r.titulo,
+            artista_original: r.artista_original || null,
+            genero: r.genero || null,
+            duracao_minutos: r.duracao_minutos || null,
+            tom: r.tom || null,
+            bpm: r.bpm || null,
+            dificuldade: r.dificuldade || "medio",
+            tipo: r.tipo || "cover",
+            letra: r.letra || null,
+            cifra: r.cifra || null,
+            observacoes: r.observacoes || null
+          }));
+
+        const { error: repertorioError } = await client
           .from('banda_repertorio')
-          .insert(repertoriosData);
-        
-        if (repertoriosError) throw repertoriosError;
+          .insert(repertorioData);
+
+        if (repertorioError) throw repertorioError;
       }
 
       // Inserir rider técnico
+      const riderData = {
+        banda_id: bandaId,
+        tenant_id: tenantId,
+        nome: riderTecnico.nome,
+        descricao: riderTecnico.descricao || null,
+        microfones_vocal: riderTecnico.microfones_vocal,
+        microfones_instrumento: riderTecnico.microfones_instrumento,
+        direct_boxes: riderTecnico.direct_boxes,
+        monitores_palco: riderTecnico.monitores_palco,
+        canais_mixer: riderTecnico.canais_mixer,
+        tomadas_220v: riderTecnico.tomadas_220v,
+        tomadas_110v: riderTecnico.tomadas_110v,
+        extensoes_necessarias: riderTecnico.extensoes_necessarias,
+        cobertura_necessaria: riderTecnico.cobertura_necessaria,
+        iluminacao_basica: riderTecnico.iluminacao_basica,
+        iluminacao_especial: riderTecnico.iluminacao_especial || null,
+        altura_palco_minima: riderTecnico.altura_palco_minima || null,
+        tamanho_palco_minimo: riderTecnico.tamanho_palco_minimo || null,
+        equipamentos_especiais: riderTecnico.equipamentos_especiais || null,
+        instrumentos_fornecidos: riderTecnico.instrumentos_fornecidos || null,
+        amplificadores: riderTecnico.amplificadores || null,
+        camarim_necessario: riderTecnico.camarim_necessario,
+        estacionamento_necessario: riderTecnico.estacionamento_necessario,
+        seguranca_necessaria: riderTecnico.seguranca_necessaria,
+        observacoes_gerais: riderTecnico.observacoes_gerais || null
+      };
+
       const { error: riderError } = await client
         .from('banda_rider_tecnico')
-        .insert({ ...riderTecnico, banda_id: bandaId });
-      
+        .insert(riderData);
+
       if (riderError) throw riderError;
 
       // Inserir mapa de palco
+      const mapaData = {
+        banda_id: bandaId,
+        tenant_id: tenantId,
+        nome: mapaPalco.nome,
+        descricao: mapaPalco.descricao || null,
+        posicao_vocal: mapaPalco.posicao_vocal || null,
+        posicao_guitarra: mapaPalco.posicao_guitarra || null,
+        posicao_baixo: mapaPalco.posicao_baixo || null,
+        posicao_bateria: mapaPalco.posicao_bateria || null,
+        posicao_teclado: mapaPalco.posicao_teclado || null,
+        posicao_microfones: mapaPalco.posicao_microfones || null,
+        posicao_monitores: mapaPalco.posicao_monitores || null,
+        posicao_amplificadores: mapaPalco.posicao_amplificadores || null,
+        posicoes_outros: mapaPalco.posicoes_outros || null,
+        observacoes: mapaPalco.observacoes || null
+      };
+
       const { error: mapaError } = await client
         .from('banda_mapa_palco')
-        .insert({ ...mapaPalco, banda_id: bandaId });
-      
+        .insert(mapaData);
+
       if (mapaError) throw mapaError;
 
       toast.success("Banda criada com sucesso!");
       onBandCreated(bandData);
       onOpenChange(false);
-      
+
       // Reset form
-      setBandInfo({
-        unidade: "",
-        nome: "",
-        genero: "",
-        descricao: ""
-      });
+      setBandInfo({ unidade: "", nome: "", genero: "", descricao: "" });
       setIntegrantes([{
         nome: "",
         instrumento: "",
         funcao: "",
-        curso: "",
         telefone: "",
         email: "",
-        responsavel: false,
         instagram: "",
-        data_entrada: "",
-        descricao: "",
-        anotacoes: ""
+        facebook: "",
+        youtube: "",
+        spotify: "",
+        observacoes: ""
       }]);
-      setRepertorios([{
+      setRepertorio([{
         titulo: "",
         artista_original: "",
         genero: "",
-        duracao: "",
+        duracao_minutos: 0,
         tom: "",
-        bpm: "",
-        tipo: "",
-        dificuldade: "",
+        bpm: 0,
+        tipo: "cover",
+        dificuldade: "medio",
         observacoes: "",
-        letra: ""
+        letra: "",
+        cifra: ""
       }]);
       setRiderTecnico({
-        microfones: "",
-        cabos: "",
+        nome: "Rider Técnico",
+        descricao: "",
+        microfones_vocal: 0,
+        microfones_instrumento: 0,
+        direct_boxes: 0,
+        monitores_palco: 0,
+        canais_mixer: 0,
+        tomadas_220v: 0,
+        tomadas_110v: 0,
+        extensoes_necessarias: false,
+        cobertura_necessaria: false,
+        iluminacao_basica: true,
+        iluminacao_especial: "",
+        altura_palco_minima: "",
+        tamanho_palco_minimo: "",
+        equipamentos_especiais: "",
+        instrumentos_fornecidos: "",
         amplificadores: "",
-        direct_box: "",
-        monitores: "",
-        canais_mixer: "",
-        instrumentos: "",
-        tomadas: "",
-        palco: "",
-        iluminacao: "",
-        camarim: "",
-        estacionamento: "",
-        observacoes: ""
+        camarim_necessario: false,
+        estacionamento_necessario: false,
+        seguranca_necessaria: false,
+        observacoes_gerais: ""
       });
       setMapaPalco({
+        nome: "Mapa de Palco",
+        descricao: "",
         posicao_vocal: "",
         posicao_guitarra: "",
         posicao_baixo: "",
         posicao_bateria: "",
         posicao_teclado: "",
-        posicao_outros: "",
-        posicao_amplificadores: "",
+        posicao_microfones: "",
         posicao_monitores: "",
+        posicao_amplificadores: "",
+        posicoes_outros: "",
         observacoes: ""
       });
       setActiveTab("info");
@@ -342,7 +494,7 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
             <Card>
               <CardHeader>
                 <CardTitle>Informações da Banda</CardTitle>
-                <CardDescription>Dados básicos e redes sociais</CardDescription>
+                <CardDescription>Dados básicos da banda</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -361,9 +513,6 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                         ))}
                       </SelectContent>
                     </Select>
-                    {unidades.length === 0 && (
-                      <p className="text-xs text-muted-foreground">Cadastre unidades para habilitar a seleção.</p>
-                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="nome">Nome da Banda *</Label>
@@ -376,16 +525,14 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="genero">Gênero</Label>
-                    <Input
-                      id="genero"
-                      value={bandInfo.genero}
-                      onChange={(e) => setBandInfo({...bandInfo, genero: e.target.value})}
-                      placeholder="Ex: Rock, Pop, Jazz"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="genero">Gênero</Label>
+                  <Input
+                    id="genero"
+                    value={bandInfo.genero}
+                    onChange={(e) => setBandInfo({...bandInfo, genero: e.target.value})}
+                    placeholder="Ex: Rock, Pop, Jazz"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -444,7 +591,7 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Função</Label>
                         <Input
@@ -454,25 +601,6 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Curso</Label>
-                        <Input
-                          value={integrante.curso}
-                          onChange={(e) => updateIntegrante(index, 'curso', e.target.value)}
-                          placeholder="Curso na instituição"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Data de Entrada</Label>
-                        <Input
-                          type="date"
-                          value={integrante.data_entrada}
-                          onChange={(e) => updateIntegrante(index, 'data_entrada', e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
                         <Label>Telefone</Label>
                         <Input
                           value={integrante.telefone}
@@ -480,6 +608,9 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                           placeholder="(11) 99999-9999"
                         />
                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Email</Label>
                         <Input
@@ -489,9 +620,6 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                           placeholder="email@exemplo.com"
                         />
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Instagram</Label>
                         <Input
@@ -500,33 +628,14 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                           placeholder="@usuario"
                         />
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id={`responsavel-${index}`}
-                          checked={integrante.responsavel}
-                          onChange={(e) => updateIntegrante(index, 'responsavel', e.target.checked)}
-                        />
-                        <Label htmlFor={`responsavel-${index}`}>Responsável pela banda</Label>
-                      </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Descrição</Label>
+                      <Label>Observações</Label>
                       <Textarea
-                        value={integrante.descricao}
-                        onChange={(e) => updateIntegrante(index, 'descricao', e.target.value)}
+                        value={integrante.observacoes}
+                        onChange={(e) => updateIntegrante(index, 'observacoes', e.target.value)}
                         placeholder="Experiência musical, especialidades..."
-                        rows={2}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Anotações</Label>
-                      <Textarea
-                        value={integrante.anotacoes}
-                        onChange={(e) => updateIntegrante(index, 'anotacoes', e.target.value)}
-                        placeholder="Observações internas"
                         rows={2}
                       />
                     </div>
@@ -548,11 +657,11 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                 <CardDescription>Músicas do repertório da banda</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {repertorios.map((repertorio, index) => (
+                {repertorio.map((musica, index) => (
                   <div key={index} className="border rounded-lg p-4 space-y-4">
                     <div className="flex justify-between items-center">
                       <h4 className="font-medium">Música {index + 1}</h4>
-                      {repertorios.length > 1 && (
+                      {repertorio.length > 1 && (
                         <Button
                           type="button"
                           variant="outline"
@@ -568,7 +677,7 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                       <div className="space-y-2">
                         <Label>Título *</Label>
                         <Input
-                          value={repertorio.titulo}
+                          value={musica.titulo}
                           onChange={(e) => updateRepertorio(index, 'titulo', e.target.value)}
                           placeholder="Nome da música"
                         />
@@ -576,7 +685,7 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                       <div className="space-y-2">
                         <Label>Artista Original</Label>
                         <Input
-                          value={repertorio.artista_original}
+                          value={musica.artista_original}
                           onChange={(e) => updateRepertorio(index, 'artista_original', e.target.value)}
                           placeholder="Artista/banda original"
                         />
@@ -587,23 +696,24 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                       <div className="space-y-2">
                         <Label>Gênero</Label>
                         <Input
-                          value={repertorio.genero}
+                          value={musica.genero}
                           onChange={(e) => updateRepertorio(index, 'genero', e.target.value)}
                           placeholder="Rock, Pop, etc."
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Duração</Label>
+                        <Label>Duração (min)</Label>
                         <Input
-                          value={repertorio.duracao}
-                          onChange={(e) => updateRepertorio(index, 'duracao', e.target.value)}
-                          placeholder="3:45"
+                          type="number"
+                          value={musica.duracao_minutos}
+                          onChange={(e) => updateRepertorio(index, 'duracao_minutos', parseInt(e.target.value) || 0)}
+                          placeholder="3"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>Tom</Label>
                         <Input
-                          value={repertorio.tom}
+                          value={musica.tom}
                           onChange={(e) => updateRepertorio(index, 'tom', e.target.value)}
                           placeholder="C, Am, etc."
                         />
@@ -611,8 +721,9 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                       <div className="space-y-2">
                         <Label>BPM</Label>
                         <Input
-                          value={repertorio.bpm}
-                          onChange={(e) => updateRepertorio(index, 'bpm', e.target.value)}
+                          type="number"
+                          value={musica.bpm}
+                          onChange={(e) => updateRepertorio(index, 'bpm', parseInt(e.target.value) || 0)}
                           placeholder="120"
                         />
                       </div>
@@ -621,7 +732,7 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Tipo</Label>
-                        <Select value={repertorio.tipo} onValueChange={(value) => updateRepertorio(index, 'tipo', value)}>
+                        <Select value={musica.tipo} onValueChange={(value) => updateRepertorio(index, 'tipo', value)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione o tipo" />
                           </SelectTrigger>
@@ -634,7 +745,7 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                       </div>
                       <div className="space-y-2">
                         <Label>Dificuldade</Label>
-                        <Select value={repertorio.dificuldade} onValueChange={(value) => updateRepertorio(index, 'dificuldade', value)}>
+                        <Select value={musica.dificuldade} onValueChange={(value) => updateRepertorio(index, 'dificuldade', value)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione a dificuldade" />
                           </SelectTrigger>
@@ -648,22 +759,12 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Observações</Label>
-                      <Textarea
-                        value={repertorio.observacoes}
-                        onChange={(e) => updateRepertorio(index, 'observacoes', e.target.value)}
-                        placeholder="Observações sobre a música, arranjo, etc."
-                        rows={2}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
                       <Label>Letra</Label>
                       <Textarea
-                        value={repertorio.letra}
+                        value={musica.letra}
                         onChange={(e) => updateRepertorio(index, 'letra', e.target.value)}
                         placeholder="Letra da música..."
-                        rows={4}
+                        rows={3}
                       />
                     </div>
                   </div>
@@ -686,149 +787,57 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="microfones">Microfones</Label>
-                    <Textarea
-                      id="microfones"
-                      value={riderTecnico.microfones}
-                      onChange={(e) => setRiderTecnico({...riderTecnico, microfones: e.target.value})}
-                      placeholder="Quantidade e tipos de microfones necessários"
-                      rows={2}
+                    <Label htmlFor="microfones_vocal">Microfones Vocal</Label>
+                    <Input
+                      id="microfones_vocal"
+                      type="number"
+                      value={riderTecnico.microfones_vocal}
+                      onChange={(e) => setRiderTecnico({...riderTecnico, microfones_vocal: parseInt(e.target.value) || 0})}
+                      placeholder="Quantidade"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cabos">Cabos</Label>
-                    <Textarea
-                      id="cabos"
-                      value={riderTecnico.cabos}
-                      onChange={(e) => setRiderTecnico({...riderTecnico, cabos: e.target.value})}
-                      placeholder="Cabos necessários (P10, XLR, etc.)"
-                      rows={2}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="amplificadores">Amplificadores</Label>
-                    <Textarea
-                      id="amplificadores"
-                      value={riderTecnico.amplificadores}
-                      onChange={(e) => setRiderTecnico({...riderTecnico, amplificadores: e.target.value})}
-                      placeholder="Amplificadores necessários"
-                      rows={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="direct_box">Direct Box</Label>
-                    <Textarea
-                      id="direct_box"
-                      value={riderTecnico.direct_box}
-                      onChange={(e) => setRiderTecnico({...riderTecnico, direct_box: e.target.value})}
-                      placeholder="Direct boxes necessários"
-                      rows={2}
+                    <Label htmlFor="microfones_instrumento">Microfones Instrumento</Label>
+                    <Input
+                      id="microfones_instrumento"
+                      type="number"
+                      value={riderTecnico.microfones_instrumento}
+                      onChange={(e) => setRiderTecnico({...riderTecnico, microfones_instrumento: parseInt(e.target.value) || 0})}
+                      placeholder="Quantidade"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="monitores">Monitores</Label>
-                    <Textarea
-                      id="monitores"
-                      value={riderTecnico.monitores}
-                      onChange={(e) => setRiderTecnico({...riderTecnico, monitores: e.target.value})}
-                      placeholder="Monitores de palco necessários"
-                      rows={2}
+                    <Label htmlFor="direct_boxes">Direct Boxes</Label>
+                    <Input
+                      id="direct_boxes"
+                      type="number"
+                      value={riderTecnico.direct_boxes}
+                      onChange={(e) => setRiderTecnico({...riderTecnico, direct_boxes: parseInt(e.target.value) || 0})}
+                      placeholder="Quantidade"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="canais_mixer">Canais do Mixer</Label>
-                    <Textarea
-                      id="canais_mixer"
-                      value={riderTecnico.canais_mixer}
-                      onChange={(e) => setRiderTecnico({...riderTecnico, canais_mixer: e.target.value})}
-                      placeholder="Quantidade de canais necessários"
-                      rows={2}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="instrumentos">Instrumentos</Label>
-                    <Textarea
-                      id="instrumentos"
-                      value={riderTecnico.instrumentos}
-                      onChange={(e) => setRiderTecnico({...riderTecnico, instrumentos: e.target.value})}
-                      placeholder="Instrumentos que a banda traz/precisa"
-                      rows={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tomadas">Tomadas</Label>
-                    <Textarea
-                      id="tomadas"
-                      value={riderTecnico.tomadas}
-                      onChange={(e) => setRiderTecnico({...riderTecnico, tomadas: e.target.value})}
-                      placeholder="Quantidade de tomadas necessárias"
-                      rows={2}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="palco">Palco</Label>
-                    <Textarea
-                      id="palco"
-                      value={riderTecnico.palco}
-                      onChange={(e) => setRiderTecnico({...riderTecnico, palco: e.target.value})}
-                      placeholder="Dimensões e características do palco"
-                      rows={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="iluminacao">Iluminação</Label>
-                    <Textarea
-                      id="iluminacao"
-                      value={riderTecnico.iluminacao}
-                      onChange={(e) => setRiderTecnico({...riderTecnico, iluminacao: e.target.value})}
-                      placeholder="Necessidades de iluminação"
-                      rows={2}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="camarim">Camarim</Label>
-                    <Textarea
-                      id="camarim"
-                      value={riderTecnico.camarim}
-                      onChange={(e) => setRiderTecnico({...riderTecnico, camarim: e.target.value})}
-                      placeholder="Necessidades do camarim"
-                      rows={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="estacionamento">Estacionamento</Label>
-                    <Textarea
-                      id="estacionamento"
-                      value={riderTecnico.estacionamento}
-                      onChange={(e) => setRiderTecnico({...riderTecnico, estacionamento: e.target.value})}
-                      placeholder="Necessidades de estacionamento"
-                      rows={2}
+                    <Label htmlFor="monitores_palco">Monitores de Palco</Label>
+                    <Input
+                      id="monitores_palco"
+                      type="number"
+                      value={riderTecnico.monitores_palco}
+                      onChange={(e) => setRiderTecnico({...riderTecnico, monitores_palco: parseInt(e.target.value) || 0})}
+                      placeholder="Quantidade"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="observacoes_rider">Observações</Label>
+                  <Label htmlFor="observacoes_gerais">Observações Gerais</Label>
                   <Textarea
-                    id="observacoes_rider"
-                    value={riderTecnico.observacoes}
-                    onChange={(e) => setRiderTecnico({...riderTecnico, observacoes: e.target.value})}
-                    placeholder="Observações gerais sobre o rider técnico"
+                    id="observacoes_gerais"
+                    value={riderTecnico.observacoes_gerais}
+                    onChange={(e) => setRiderTecnico({...riderTecnico, observacoes_gerais: e.target.value})}
+                    placeholder="Observações sobre equipamentos e necessidades técnicas"
                     rows={3}
                   />
                 </div>
@@ -885,48 +894,6 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="posicao_teclado">Posição Teclado</Label>
-                    <Input
-                      id="posicao_teclado"
-                      value={mapaPalco.posicao_teclado}
-                      onChange={(e) => setMapaPalco({...mapaPalco, posicao_teclado: e.target.value})}
-                      placeholder="Ex: Direita fundo"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="posicao_outros">Outros Instrumentos</Label>
-                    <Input
-                      id="posicao_outros"
-                      value={mapaPalco.posicao_outros}
-                      onChange={(e) => setMapaPalco({...mapaPalco, posicao_outros: e.target.value})}
-                      placeholder="Posição de outros instrumentos"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="posicao_amplificadores">Posição Amplificadores</Label>
-                    <Input
-                      id="posicao_amplificadores"
-                      value={mapaPalco.posicao_amplificadores}
-                      onChange={(e) => setMapaPalco({...mapaPalco, posicao_amplificadores: e.target.value})}
-                      placeholder="Posicionamento dos amplificadores"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="posicao_monitores">Posição Monitores</Label>
-                    <Input
-                      id="posicao_monitores"
-                      value={mapaPalco.posicao_monitores}
-                      onChange={(e) => setMapaPalco({...mapaPalco, posicao_monitores: e.target.value})}
-                      placeholder="Posicionamento dos monitores"
-                    />
-                  </div>
-                </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="observacoes_mapa">Observações</Label>
                   <Textarea
@@ -947,7 +914,7 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
             Cancelar
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? "Salvando..." : "Criar Banda"}
+            {isLoading ? "Criando..." : "Criar Banda"}
           </Button>
         </DialogFooter>
       </DialogContent>

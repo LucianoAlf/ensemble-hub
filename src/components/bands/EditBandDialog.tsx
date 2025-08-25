@@ -20,22 +20,11 @@ interface Band {
   members_count: number;
 }
 
-interface BandForm {
-  name: string;
-  genre?: string;
-  description?: string;
-}
-
 interface BandInfo {
   unidade: string;
   nome: string;
   genero: string;
-  influencias: string;
-  instagram: string;
-  youtube: string;
-  spotify: string;
   descricao: string;
-  anotacoes: string;
 }
 
 interface Integrante {
@@ -43,14 +32,13 @@ interface Integrante {
   nome: string;
   instrumento: string;
   funcao: string;
-  curso: string;
   telefone: string;
   email: string;
-  responsavel: boolean;
   instagram: string;
-  data_entrada: string;
-  descricao: string;
-  anotacoes: string;
+  facebook: string;
+  youtube: string;
+  spotify: string;
+  observacoes: string;
 }
 
 interface Repertorio {
@@ -58,42 +46,55 @@ interface Repertorio {
   titulo: string;
   artista_original: string;
   genero: string;
-  duracao: string;
+  duracao_minutos: number;
   tom: string;
-  bpm: string;
+  bpm: number;
   tipo: string;
   dificuldade: string;
   observacoes: string;
   letra: string;
+  cifra: string;
 }
 
 interface RiderTecnico {
   id?: string;
-  microfones: string;
-  cabos: string;
+  nome: string;
+  descricao: string;
+  microfones_vocal: number;
+  microfones_instrumento: number;
+  direct_boxes: number;
+  monitores_palco: number;
+  canais_mixer: number;
+  tomadas_220v: number;
+  tomadas_110v: number;
+  extensoes_necessarias: boolean;
+  cobertura_necessaria: boolean;
+  iluminacao_basica: boolean;
+  iluminacao_especial: string;
+  altura_palco_minima: string;
+  tamanho_palco_minimo: string;
+  equipamentos_especiais: string;
+  instrumentos_fornecidos: string;
   amplificadores: string;
-  direct_box: string;
-  monitores: string;
-  canais_mixer: string;
-  instrumentos: string;
-  tomadas: string;
-  palco: string;
-  iluminacao: string;
-  camarim: string;
-  estacionamento: string;
-  observacoes: string;
+  camarim_necessario: boolean;
+  estacionamento_necessario: boolean;
+  seguranca_necessaria: boolean;
+  observacoes_gerais: string;
 }
 
 interface MapaPalco {
   id?: string;
+  nome: string;
+  descricao: string;
   posicao_vocal: string;
   posicao_guitarra: string;
   posicao_baixo: string;
   posicao_bateria: string;
   posicao_teclado: string;
-  posicao_outros: string;
-  posicao_amplificadores: string;
+  posicao_microfones: string;
   posicao_monitores: string;
+  posicao_amplificadores: string;
+  posicoes_outros: string;
   observacoes: string;
 }
 
@@ -116,39 +117,46 @@ export default function EditBandDialog({
     unidade: "",
     nome: "",
     genero: "",
-    influencias: "",
-    instagram: "",
-    youtube: "",
-    spotify: "",
-    descricao: "",
-    anotacoes: ""
+    descricao: ""
   });
   const [integrantes, setIntegrantes] = useState<Integrante[]>([]);
   const [repertorios, setRepertorios] = useState<Repertorio[]>([]);
   const [riderTecnico, setRiderTecnico] = useState<RiderTecnico>({
-    microfones: "",
-    cabos: "",
+    nome: "Rider Técnico",
+    descricao: "",
+    microfones_vocal: 0,
+    microfones_instrumento: 0,
+    direct_boxes: 0,
+    monitores_palco: 0,
+    canais_mixer: 0,
+    tomadas_220v: 0,
+    tomadas_110v: 0,
+    extensoes_necessarias: false,
+    cobertura_necessaria: false,
+    iluminacao_basica: true,
+    iluminacao_especial: "",
+    altura_palco_minima: "",
+    tamanho_palco_minimo: "",
+    equipamentos_especiais: "",
+    instrumentos_fornecidos: "",
     amplificadores: "",
-    direct_box: "",
-    monitores: "",
-    canais_mixer: "",
-    instrumentos: "",
-    tomadas: "",
-    palco: "",
-    iluminacao: "",
-    camarim: "",
-    estacionamento: "",
-    observacoes: ""
+    camarim_necessario: false,
+    estacionamento_necessario: false,
+    seguranca_necessaria: false,
+    observacoes_gerais: ""
   });
   const [mapaPalco, setMapaPalco] = useState<MapaPalco>({
+    nome: "Mapa de Palco",
+    descricao: "",
     posicao_vocal: "",
     posicao_guitarra: "",
     posicao_baixo: "",
     posicao_bateria: "",
     posicao_teclado: "",
-    posicao_outros: "",
-    posicao_amplificadores: "",
+    posicao_microfones: "",
     posicao_monitores: "",
+    posicao_amplificadores: "",
+    posicoes_outros: "",
     observacoes: ""
   });
   const [unidades, setUnidades] = useState<Unidade[]>([]);
@@ -176,7 +184,7 @@ export default function EditBandDialog({
       setUnidades(data || []);
     };
     loadUnidades();
-  }, [open]);
+  }, [open, supabase, toast]);
 
   const loadBandData = async () => {
     if (!band) return;
@@ -185,30 +193,98 @@ export default function EditBandDialog({
       // Carregar info da banda
       const { data: bandData } = await supabase.from('banda').select('*').eq('id', band.id).single();
       if (bandData) {
-        setBandInfo((prev) => ({
-          ...prev,
+        setBandInfo({
           nome: bandData.nome || "",
           genero: bandData.genero || "",
           descricao: bandData.descricao || "",
           unidade: bandData.unidade_id || "",
-        }));
+        });
       }
 
-      // Carregar integrantes
+      // Carregar integrantes - mapping data properly to interface
       const { data: intData } = await supabase.from('banda_integrante').select('*').eq('banda_id', band.id);
-      setIntegrantes(intData || []);
+      const mappedIntegrantes: Integrante[] = (intData || []).map(item => ({
+        id: item.id,
+        nome: item.nome,
+        instrumento: item.instrumento,
+        funcao: item.funcao || "",
+        telefone: item.telefone || "",
+        email: item.email || "",
+        instagram: item.instagram || "",
+        facebook: item.facebook || "",
+        youtube: item.youtube || "",
+        spotify: item.spotify || "",
+        observacoes: item.observacoes || ""
+      }));
+      setIntegrantes(mappedIntegrantes);
 
-      // Carregar repertórios
+      // Carregar repertórios - mapping data properly to interface  
       const { data: repData } = await supabase.from('banda_repertorio').select('*').eq('banda_id', band.id);
-      setRepertorios(repData || []);
+      const mappedRepertorios: Repertorio[] = (repData || []).map(item => ({
+        id: item.id,
+        titulo: item.titulo,
+        artista_original: item.artista_original || "",
+        genero: item.genero || "",
+        duracao_minutos: item.duracao_minutos || 0,
+        tom: item.tom || "",
+        bpm: item.bpm || 0,
+        tipo: item.tipo || "cover",
+        dificuldade: item.dificuldade || "medio",
+        observacoes: item.observacoes || "",
+        letra: item.letra || "",
+        cifra: item.cifra || ""
+      }));
+      setRepertorios(mappedRepertorios);
 
       // Carregar rider
       const { data: riderData } = await supabase.from('banda_rider_tecnico').select('*').eq('banda_id', band.id).single();
-      if (riderData) setRiderTecnico(riderData);
+      if (riderData) {
+        setRiderTecnico({
+          id: riderData.id,
+          nome: riderData.nome || "Rider Técnico",
+          descricao: riderData.descricao || "",
+          microfones_vocal: riderData.microfones_vocal || 0,
+          microfones_instrumento: riderData.microfones_instrumento || 0,
+          direct_boxes: riderData.direct_boxes || 0,
+          monitores_palco: riderData.monitores_palco || 0,
+          canais_mixer: riderData.canais_mixer || 0,
+          tomadas_220v: riderData.tomadas_220v || 0,
+          tomadas_110v: riderData.tomadas_110v || 0,
+          extensoes_necessarias: riderData.extensoes_necessarias || false,
+          cobertura_necessaria: riderData.cobertura_necessaria || false,
+          iluminacao_basica: riderData.iluminacao_basica || true,
+          iluminacao_especial: riderData.iluminacao_especial || "",
+          altura_palco_minima: riderData.altura_palco_minima || "",
+          tamanho_palco_minimo: riderData.tamanho_palco_minimo || "",
+          equipamentos_especiais: riderData.equipamentos_especiais || "",
+          instrumentos_fornecidos: riderData.instrumentos_fornecidos || "",
+          amplificadores: riderData.amplificadores || "",
+          camarim_necessario: riderData.camarim_necessario || false,
+          estacionamento_necessario: riderData.estacionamento_necessario || false,
+          seguranca_necessaria: riderData.seguranca_necessaria || false,
+          observacoes_gerais: riderData.observacoes_gerais || ""
+        });
+      }
 
       // Carregar mapa
       const { data: mapaData } = await supabase.from('banda_mapa_palco').select('*').eq('banda_id', band.id).single();
-      if (mapaData) setMapaPalco(mapaData);
+      if (mapaData) {
+        setMapaPalco({
+          id: mapaData.id,
+          nome: mapaData.nome || "Mapa de Palco",
+          descricao: mapaData.descricao || "",
+          posicao_vocal: mapaData.posicao_vocal || "",
+          posicao_guitarra: mapaData.posicao_guitarra || "",
+          posicao_baixo: mapaData.posicao_baixo || "",
+          posicao_bateria: mapaData.posicao_bateria || "",
+          posicao_teclado: mapaData.posicao_teclado || "",
+          posicao_microfones: mapaData.posicao_microfones || "",
+          posicao_monitores: mapaData.posicao_monitores || "",
+          posicao_amplificadores: mapaData.posicao_amplificadores || "",
+          posicoes_outros: mapaData.posicoes_outros || "",
+          observacoes: mapaData.observacoes || ""
+        });
+      }
     } catch (err) {
       toast({ title: "Erro ao carregar dados", variant: "destructive" });
     } finally {
@@ -222,14 +298,13 @@ export default function EditBandDialog({
       nome: "",
       instrumento: "",
       funcao: "",
-      curso: "",
       telefone: "",
       email: "",
-      responsavel: false,
       instagram: "",
-      data_entrada: "",
-      descricao: "",
-      anotacoes: ""
+      facebook: "",
+      youtube: "",
+      spotify: "",
+      observacoes: ""
     }]);
   };
 
@@ -252,13 +327,14 @@ export default function EditBandDialog({
       titulo: "",
       artista_original: "",
       genero: "",
-      duracao: "",
+      duracao_minutos: 0,
       tom: "",
-      bpm: "",
-      tipo: "",
-      dificuldade: "",
+      bpm: 0,
+      tipo: "cover",
+      dificuldade: "medio",
       observacoes: "",
-      letra: ""
+      letra: "",
+      cifra: ""
     }]);
   };
 
@@ -269,7 +345,7 @@ export default function EditBandDialog({
     setRepertorios(repertorios.filter((_, i) => i !== index));
   };
 
-  const updateRepertorio = (index: number, field: keyof Repertorio, value: string) => {
+  const updateRepertorio = (index: number, field: keyof Repertorio, value: any) => {
     const updated = [...repertorios];
     updated[index] = { ...updated[index], [field]: value };
     setRepertorios(updated);
@@ -277,71 +353,142 @@ export default function EditBandDialog({
 
   const handleSubmit = async () => {
     if (!band) return;
+    
     // Validação
     if (!bandInfo.nome.trim()) {
       toast({ title: "Erro de validação", description: "O nome da banda é obrigatório.", variant: "destructive" });
       setActiveTab("info");
       return;
     }
-    if (integrantes.length === 0) {
-      toast({ title: "Erro de validação", description: "Pelo menos um integrante é obrigatório.", variant: "destructive" });
-      setActiveTab("integrantes");
-      return;
-    }
-    for (const int of integrantes) {
-      if (!int.nome.trim()) {
-        toast({ title: "Erro de validação", description: "Nome do integrante é obrigatório.", variant: "destructive" });
-        setActiveTab("integrantes");
-        return;
-      }
-    }
-    for (const rep of repertorios) {
-      if (!rep.titulo.trim()) {
-        toast({ title: "Erro de validação", description: "Título da música é obrigatório.", variant: "destructive" });
-        setActiveTab("repertorio");
-        return;
-      }
-    }
-    // Outras validações semelhantes para rider e mapa se necessário
+
     setLoading(true);
     try {
-      // Atualizar banda
-      await supabase.from('banda').update({ nome: bandInfo.nome, genero: bandInfo.genero, descricao: bandInfo.descricao }).eq('id', band.id);
-      if (bandInfo.unidade) {
-        await supabase.from('banda').update({ unidade_id: bandInfo.unidade }).eq('id', band.id);
-      } else {
-        await supabase.from('banda').update({ unidade_id: null }).eq('id', band.id);
+      // Get tenant_id
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .single();
+
+      if (!profile?.tenant_id) {
+        throw new Error('Tenant ID não encontrado');
       }
+
+      const tenantId = profile.tenant_id;
+
+      // Atualizar banda
+      await supabase.from('banda').update({ 
+        nome: bandInfo.nome, 
+        genero: bandInfo.genero, 
+        descricao: bandInfo.descricao,
+        unidade_id: bandInfo.unidade || null
+      }).eq('id', band.id);
+
       // Atualizar/Inserir integrantes
       for (const int of integrantes) {
+        const integranteData = {
+          banda_id: band.id,
+          tenant_id: tenantId,
+          nome: int.nome,
+          instrumento: int.instrumento || "Não especificado",
+          funcao: int.funcao || null,
+          telefone: int.telefone || null,
+          email: int.email || null,
+          instagram: int.instagram || null,
+          facebook: int.facebook || null,
+          youtube: int.youtube || null,
+          spotify: int.spotify || null,
+          observacoes: int.observacoes || null,
+          data_entrada: new Date().toISOString().split('T')[0]
+        };
+
         if (int.id) {
-          await supabase.from('banda_integrante').update(int).eq('id', int.id);
+          await supabase.from('banda_integrante').update(integranteData).eq('id', int.id);
         } else {
-          await supabase.from('banda_integrante').insert({ ...int, banda_id: band.id });
+          await supabase.from('banda_integrante').insert(integranteData);
         }
       }
 
       // Atualizar/Inserir repertórios
       for (const rep of repertorios) {
+        const repertorioData = {
+          banda_id: band.id,
+          tenant_id: tenantId,
+          titulo: rep.titulo,
+          artista_original: rep.artista_original || null,
+          genero: rep.genero || null,
+          duracao_minutos: rep.duracao_minutos || null,
+          tom: rep.tom || null,
+          bpm: rep.bpm || null,
+          dificuldade: rep.dificuldade || "medio",
+          tipo: rep.tipo || "cover",
+          letra: rep.letra || null,
+          cifra: rep.cifra || null,
+          observacoes: rep.observacoes || null
+        };
+
         if (rep.id) {
-          await supabase.from('banda_repertorio').update(rep).eq('id', rep.id);
+          await supabase.from('banda_repertorio').update(repertorioData).eq('id', rep.id);
         } else {
-          await supabase.from('banda_repertorio').insert({ ...rep, banda_id: band.id });
+          await supabase.from('banda_repertorio').insert(repertorioData);
         }
       }
 
       // Atualizar rider
+      const riderData = {
+        banda_id: band.id,
+        tenant_id: tenantId,
+        nome: riderTecnico.nome,
+        descricao: riderTecnico.descricao || null,
+        microfones_vocal: riderTecnico.microfones_vocal,
+        microfones_instrumento: riderTecnico.microfones_instrumento,
+        direct_boxes: riderTecnico.direct_boxes,
+        monitores_palco: riderTecnico.monitores_palco,
+        canais_mixer: riderTecnico.canais_mixer,
+        tomadas_220v: riderTecnico.tomadas_220v,
+        tomadas_110v: riderTecnico.tomadas_110v,
+        extensoes_necessarias: riderTecnico.extensoes_necessarias,
+        cobertura_necessaria: riderTecnico.cobertura_necessaria,
+        iluminacao_basica: riderTecnico.iluminacao_basica,
+        iluminacao_especial: riderTecnico.iluminacao_especial || null,
+        altura_palco_minima: riderTecnico.altura_palco_minima || null,
+        tamanho_palco_minimo: riderTecnico.tamanho_palco_minimo || null,
+        equipamentos_especiais: riderTecnico.equipamentos_especiais || null,
+        instrumentos_fornecidos: riderTecnico.instrumentos_fornecidos || null,
+        amplificadores: riderTecnico.amplificadores || null,
+        camarim_necessario: riderTecnico.camarim_necessario,
+        estacionamento_necessario: riderTecnico.estacionamento_necessario,
+        seguranca_necessaria: riderTecnico.seguranca_necessaria,
+        observacoes_gerais: riderTecnico.observacoes_gerais || null
+      };
+
       if (riderTecnico.id) {
-        await supabase.from('banda_rider_tecnico').update(riderTecnico).eq('id', riderTecnico.id);
+        await supabase.from('banda_rider_tecnico').update(riderData).eq('id', riderTecnico.id);
       } else {
-        await supabase.from('banda_rider_tecnico').insert({ ...riderTecnico, banda_id: band.id });
+        await supabase.from('banda_rider_tecnico').insert(riderData);
       }
 
       // Atualizar mapa
+      const mapaData = {
+        banda_id: band.id,
+        tenant_id: tenantId,
+        nome: mapaPalco.nome,
+        descricao: mapaPalco.descricao || null,
+        posicao_vocal: mapaPalco.posicao_vocal || null,
+        posicao_guitarra: mapaPalco.posicao_guitarra || null,
+        posicao_baixo: mapaPalco.posicao_baixo || null,
+        posicao_bateria: mapaPalco.posicao_bateria || null,
+        posicao_teclado: mapaPalco.posicao_teclado || null,
+        posicao_microfones: mapaPalco.posicao_microfones || null,
+        posicao_monitores: mapaPalco.posicao_monitores || null,
+        posicao_amplificadores: mapaPalco.posicao_amplificadores || null,
+        posicoes_outros: mapaPalco.posicoes_outros || null,
+        observacoes: mapaPalco.observacoes || null
+      };
+
       if (mapaPalco.id) {
-        await supabase.from('banda_mapa_palco').update(mapaPalco).eq('id', mapaPalco.id);
+        await supabase.from('banda_mapa_palco').update(mapaData).eq('id', mapaPalco.id);
       } else {
-        await supabase.from('banda_mapa_palco').insert({ ...mapaPalco, banda_id: band.id });
+        await supabase.from('banda_mapa_palco').insert(mapaData);
       }
 
       toast({ title: "Banda atualizada com sucesso!" });
@@ -371,6 +518,7 @@ export default function EditBandDialog({
             <TabsTrigger value="rider">Rider Técnico</TabsTrigger>
             <TabsTrigger value="mapa">Mapa de Palco</TabsTrigger>
           </TabsList>
+          
           <TabsContent value="info">
             <Card>
               <CardHeader>
@@ -399,34 +547,15 @@ export default function EditBandDialog({
                     <Label htmlFor="genero">Gênero</Label>
                     <Input id="genero" value={bandInfo.genero} onChange={(e) => setBandInfo({...bandInfo, genero: e.target.value})} />
                   </div>
-                  <div>
-                    <Label htmlFor="influencias">Influências</Label>
-                    <Input id="influencias" value={bandInfo.influencias} onChange={(e) => setBandInfo({...bandInfo, influencias: e.target.value})} />
-                  </div>
-                  <div>
-                    <Label htmlFor="instagram">Instagram</Label>
-                    <Input id="instagram" value={bandInfo.instagram} onChange={(e) => setBandInfo({...bandInfo, instagram: e.target.value})} />
-                  </div>
-                  <div>
-                    <Label htmlFor="youtube">YouTube</Label>
-                    <Input id="youtube" value={bandInfo.youtube} onChange={(e) => setBandInfo({...bandInfo, youtube: e.target.value})} />
-                  </div>
-                  <div>
-                    <Label htmlFor="spotify">Spotify</Label>
-                    <Input id="spotify" value={bandInfo.spotify} onChange={(e) => setBandInfo({...bandInfo, spotify: e.target.value})} />
-                  </div>
                 </div>
                 <div>
                   <Label htmlFor="descricao">Descrição</Label>
                   <Textarea id="descricao" value={bandInfo.descricao} onChange={(e) => setBandInfo({...bandInfo, descricao: e.target.value})} />
                 </div>
-                <div>
-                  <Label htmlFor="anotacoes">Anotações</Label>
-                  <Textarea id="anotacoes" value={bandInfo.anotacoes} onChange={(e) => setBandInfo({...bandInfo, anotacoes: e.target.value})} />
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
+          
           <TabsContent value="integrantes">
             <Card>
               <CardHeader>
@@ -454,10 +583,6 @@ export default function EditBandDialog({
                         <Input id={`int-funcao-${index}`} value={integrante.funcao} onChange={(e) => updateIntegrante(index, 'funcao', e.target.value)} />
                       </div>
                       <div>
-                        <Label htmlFor={`int-curso-${index}`}>Curso</Label>
-                        <Input id={`int-curso-${index}`} value={integrante.curso} onChange={(e) => updateIntegrante(index, 'curso', e.target.value)} />
-                      </div>
-                      <div>
                         <Label htmlFor={`int-telefone-${index}`}>Telefone</Label>
                         <Input id={`int-telefone-${index}`} value={integrante.telefone} onChange={(e) => updateIntegrante(index, 'telefone', e.target.value)} />
                       </div>
@@ -469,36 +594,13 @@ export default function EditBandDialog({
                         <Label htmlFor={`int-instagram-${index}`}>Instagram</Label>
                         <Input id={`int-instagram-${index}`} value={integrante.instagram} onChange={(e) => updateIntegrante(index, 'instagram', e.target.value)} />
                       </div>
-                      <div>
-                        <Label htmlFor={`int-data-entrada-${index}`}>Data de Entrada</Label>
-                        <Input id={`int-data-entrada-${index}`} type="date" value={integrante.data_entrada} onChange={(e) => updateIntegrante(index, 'data_entrada', e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <Label htmlFor={`int-descricao-${index}`}>Descrição</Label>
-                      <Textarea id={`int-descricao-${index}`} value={integrante.descricao} onChange={(e) => updateIntegrante(index, 'descricao', e.target.value)} />
-                    </div>
-                    <div className="mt-4">
-                      <Label htmlFor={`int-anotacoes-${index}`}>Anotações</Label>
-                      <Textarea id={`int-anotacoes-${index}`} value={integrante.anotacoes} onChange={(e) => updateIntegrante(index, 'anotacoes', e.target.value)} />
-                    </div>
-                    <div className="mt-4">
-                      <Label>Responsável</Label>
-                      <Select value={integrante.responsavel ? 'true' : 'false'} onValueChange={(v) => updateIntegrante(index, 'responsavel', v === 'true')}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="true">Sim</SelectItem>
-                          <SelectItem value="false">Não</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                   </Card>
                 ))}
               </CardContent>
             </Card>
           </TabsContent>
+          
           <TabsContent value="repertorio">
             <Card>
               <CardHeader>
@@ -522,43 +624,20 @@ export default function EditBandDialog({
                         <Input id={`rep-artista-${index}`} value={repertorio.artista_original} onChange={(e) => updateRepertorio(index, 'artista_original', e.target.value)} />
                       </div>
                       <div>
-                        <Label htmlFor={`rep-genero-${index}`}>Gênero</Label>
-                        <Input id={`rep-genero-${index}`} value={repertorio.genero} onChange={(e) => updateRepertorio(index, 'genero', e.target.value)} />
-                      </div>
-                      <div>
-                        <Label htmlFor={`rep-duracao-${index}`}>Duração</Label>
-                        <Input id={`rep-duracao-${index}`} value={repertorio.duracao} onChange={(e) => updateRepertorio(index, 'duracao', e.target.value)} />
-                      </div>
-                      <div>
-                        <Label htmlFor={`rep-tom-${index}`}>Tom</Label>
-                        <Input id={`rep-tom-${index}`} value={repertorio.tom} onChange={(e) => updateRepertorio(index, 'tom', e.target.value)} />
+                        <Label htmlFor={`rep-duracao-${index}`}>Duração (min)</Label>
+                        <Input id={`rep-duracao-${index}`} type="number" value={repertorio.duracao_minutos} onChange={(e) => updateRepertorio(index, 'duracao_minutos', parseInt(e.target.value) || 0)} />
                       </div>
                       <div>
                         <Label htmlFor={`rep-bpm-${index}`}>BPM</Label>
-                        <Input id={`rep-bpm-${index}`} value={repertorio.bpm} onChange={(e) => updateRepertorio(index, 'bpm', e.target.value)} />
+                        <Input id={`rep-bpm-${index}`} type="number" value={repertorio.bpm} onChange={(e) => updateRepertorio(index, 'bpm', parseInt(e.target.value) || 0)} />
                       </div>
-                      <div>
-                        <Label htmlFor={`rep-tipo-${index}`}>Tipo</Label>
-                        <Input id={`rep-tipo-${index}`} value={repertorio.tipo} onChange={(e) => updateRepertorio(index, 'tipo', e.target.value)} />
-                      </div>
-                      <div>
-                        <Label htmlFor={`rep-dificuldade-${index}`}>Dificuldade</Label>
-                        <Input id={`rep-dificuldade-${index}`} value={repertorio.dificuldade} onChange={(e) => updateRepertorio(index, 'dificuldade', e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <Label htmlFor={`rep-observacoes-${index}`}>Observações</Label>
-                      <Textarea id={`rep-observacoes-${index}`} value={repertorio.observacoes} onChange={(e) => updateRepertorio(index, 'observacoes', e.target.value)} />
-                    </div>
-                    <div className="mt-4">
-                      <Label htmlFor={`rep-letra-${index}`}>Letra</Label>
-                      <Textarea id={`rep-letra-${index}`} value={repertorio.letra} onChange={(e) => updateRepertorio(index, 'letra', e.target.value)} />
                     </div>
                   </Card>
                 ))}
               </CardContent>
             </Card>
           </TabsContent>
+          
           <TabsContent value="rider">
             <Card>
               <CardHeader>
@@ -567,61 +646,22 @@ export default function EditBandDialog({
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="microfones">Microfones</Label>
-                    <Input id="microfones" value={riderTecnico.microfones} onChange={(e) => setRiderTecnico({ ...riderTecnico, microfones: e.target.value })} />
+                    <Label htmlFor="microfones_vocal">Microfones Vocal</Label>
+                    <Input id="microfones_vocal" type="number" value={riderTecnico.microfones_vocal} onChange={(e) => setRiderTecnico({...riderTecnico, microfones_vocal: parseInt(e.target.value) || 0})} />
                   </div>
                   <div>
-                    <Label htmlFor="cabos">Cabos</Label>
-                    <Input id="cabos" value={riderTecnico.cabos} onChange={(e) => setRiderTecnico({ ...riderTecnico, cabos: e.target.value })} />
+                    <Label htmlFor="monitores_palco">Monitores de Palco</Label>
+                    <Input id="monitores_palco" type="number" value={riderTecnico.monitores_palco} onChange={(e) => setRiderTecnico({...riderTecnico, monitores_palco: parseInt(e.target.value) || 0})} />
                   </div>
-                  <div>
-                    <Label htmlFor="amplificadores">Amplificadores</Label>
-                    <Input id="amplificadores" value={riderTecnico.amplificadores} onChange={(e) => setRiderTecnico({ ...riderTecnico, amplificadores: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="direct_box">Direct Box</Label>
-                    <Input id="direct_box" value={riderTecnico.direct_box} onChange={(e) => setRiderTecnico({ ...riderTecnico, direct_box: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="monitores">Monitores</Label>
-                    <Input id="monitores" value={riderTecnico.monitores} onChange={(e) => setRiderTecnico({ ...riderTecnico, monitores: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="canais_mixer">Canais Mixer</Label>
-                    <Input id="canais_mixer" value={riderTecnico.canais_mixer} onChange={(e) => setRiderTecnico({ ...riderTecnico, canais_mixer: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="instrumentos">Instrumentos</Label>
-                    <Input id="instrumentos" value={riderTecnico.instrumentos} onChange={(e) => setRiderTecnico({ ...riderTecnico, instrumentos: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="tomadas">Tomadas</Label>
-                    <Input id="tomadas" value={riderTecnico.tomadas} onChange={(e) => setRiderTecnico({ ...riderTecnico, tomadas: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="palco">Palco</Label>
-                    <Input id="palco" value={riderTecnico.palco} onChange={(e) => setRiderTecnico({ ...riderTecnico, palco: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="iluminacao">Iluminação</Label>
-                    <Input id="iluminacao" value={riderTecnico.iluminacao} onChange={(e) => setRiderTecnico({ ...riderTecnico, iluminacao: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="camarim">Camarim</Label>
-                    <Input id="camarim" value={riderTecnico.camarim} onChange={(e) => setRiderTecnico({ ...riderTecnico, camarim: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="estacionamento">Estacionamento</Label>
-                    <Input id="estacionamento" value={riderTecnico.estacionamento} onChange={(e) => setRiderTecnico({ ...riderTecnico, estacionamento: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="observacoes">Observações</Label>
-                    <Textarea id="observacoes" value={riderTecnico.observacoes} onChange={(e) => setRiderTecnico({ ...riderTecnico, observacoes: e.target.value })} />
-                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="observacoes_gerais">Observações Gerais</Label>
+                  <Textarea id="observacoes_gerais" value={riderTecnico.observacoes_gerais} onChange={(e) => setRiderTecnico({...riderTecnico, observacoes_gerais: e.target.value})} />
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
+          
           <TabsContent value="mapa">
             <Card>
               <CardHeader>
@@ -631,52 +671,29 @@ export default function EditBandDialog({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="posicao_vocal">Posição Vocal</Label>
-                    <Input id="posicao_vocal" value={mapaPalco.posicao_vocal} onChange={(e) => setMapaPalco({ ...mapaPalco, posicao_vocal: e.target.value })} />
+                    <Input id="posicao_vocal" value={mapaPalco.posicao_vocal} onChange={(e) => setMapaPalco({...mapaPalco, posicao_vocal: e.target.value})} />
                   </div>
                   <div>
                     <Label htmlFor="posicao_guitarra">Posição Guitarra</Label>
-                    <Input id="posicao_guitarra" value={mapaPalco.posicao_guitarra} onChange={(e) => setMapaPalco({ ...mapaPalco, posicao_guitarra: e.target.value })} />
+                    <Input id="posicao_guitarra" value={mapaPalco.posicao_guitarra} onChange={(e) => setMapaPalco({...mapaPalco, posicao_guitarra: e.target.value})} />
                   </div>
-                  <div>
-                    <Label htmlFor="posicao_baixo">Posição Baixo</Label>
-                    <Input id="posicao_baixo" value={mapaPalco.posicao_baixo} onChange={(e) => setMapaPalco({ ...mapaPalco, posicao_baixo: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="posicao_bateria">Posição Bateria</Label>
-                    <Input id="posicao_bateria" value={mapaPalco.posicao_bateria} onChange={(e) => setMapaPalco({ ...mapaPalco, posicao_bateria: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="posicao_teclado">Posição Teclado</Label>
-                    <Input id="posicao_teclado" value={mapaPalco.posicao_teclado} onChange={(e) => setMapaPalco({ ...mapaPalco, posicao_teclado: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="posicao_outros">Posição Outros</Label>
-                    <Input id="posicao_outros" value={mapaPalco.posicao_outros} onChange={(e) => setMapaPalco({ ...mapaPalco, posicao_outros: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="posicao_amplificadores">Posição Amplificadores</Label>
-                    <Input id="posicao_amplificadores" value={mapaPalco.posicao_amplificadores} onChange={(e) => setMapaPalco({ ...mapaPalco, posicao_amplificadores: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="posicao_monitores">Posição Monitores</Label>
-                    <Input id="posicao_monitores" value={mapaPalco.posicao_monitores} onChange={(e) => setMapaPalco({ ...mapaPalco, posicao_monitores: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="observacoes">Observações</Label>
-                    <Textarea id="observacoes" value={mapaPalco.observacoes} onChange={(e) => setMapaPalco({ ...mapaPalco, observacoes: e.target.value })} />
-                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="observacoes_mapa">Observações</Label>
+                  <Textarea id="observacoes_mapa" value={mapaPalco.observacoes} onChange={(e) => setMapaPalco({...mapaPalco, observacoes: e.target.value})} />
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
+        
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={loading}>Salvar</Button>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? "Salvando..." : "Salvar Alterações"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-// Removido o useEffect que estava fora do componente indevidamente
