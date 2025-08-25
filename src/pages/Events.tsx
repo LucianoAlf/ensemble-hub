@@ -65,12 +65,25 @@ export default function Events() {
         const res = await querySupabase(
             async ({ client }) =>
               client
-                .from("vw_eventos_proximos")
-                .select("id, titulo, tipo, inicio, local, endereco, banda_nome, orcamento, descricao, status")
+                .from("evento")
+                .select(`
+                  id, 
+                  titulo, 
+                  tipo, 
+                  inicio, 
+                  local, 
+                  endereco, 
+                  orcamento, 
+                  descricao, 
+                  status,
+                  banda:banda_id (nome)
+                `)
+                .gte("inicio", new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()) // últimos 60 dias
+                .lte("inicio", new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()) // próximos 90 dias
                 .order("inicio", { ascending: true })
                 .abortSignal(controller.signal),
             {
-              cache: { enabled: true, ttlMs: 60000, key: "events:upcoming" },
+              cache: { enabled: true, ttlMs: 60000, key: "events:all-range" },
               enableAbortSignal: true,
             }
           );
@@ -84,7 +97,7 @@ export default function Events() {
           date: row.inicio,
           venue: row.local ?? "",
           address: row.endereco ?? undefined,
-          bandName: row.banda_nome ?? undefined,
+          bandName: row.banda?.nome ?? undefined,
           budget: typeof row.orcamento === "number" ? row.orcamento : undefined,
           description: row.descricao ?? undefined,
           status: row.status ?? undefined,
