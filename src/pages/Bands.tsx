@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Plus, Search, Users, Loader2 } from "lucide-react";
 import { CreateBandDialog } from "@/components/bands/CreateBandDialog";
-import EditBandDialog from "@/components/bands/EditBandDialog";
+import { EditBandDialog } from "@/components/bands/EditBandDialog";
 import { useSupabaseOptimized } from "@/hooks/useSupabaseOptimized";
 import { useToast } from "@/hooks/use-toast";
 
