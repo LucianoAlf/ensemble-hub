@@ -66,10 +66,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log("Iniciando autenticação Google...");
       
-      // Usar URL base sem especificar redirectTo inicialmente para evitar conflitos
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
+          skipBrowserRedirect: false, // Força redirect na mesma janela
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -84,7 +84,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Tratamento específico para diferentes tipos de erro
         if (error.message.includes("invalid_request") || error.message.includes("requested path is invalid")) {
           toast("Erro de configuração", { 
-            description: "Problema na configuração do Google OAuth. Verifique as URLs no Supabase." 
+            description: "Verifique se o domínio ensemble-hub.lovable.app está configurado no Google Cloud Console e Supabase." 
           });
         } else {
           toast("Erro no login com Google", { description: error.message });
@@ -93,6 +93,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       console.log("Redirecionamento para Google iniciado:", data);
+      
+      // Forçar redirect manual se necessário
+      if (data?.url) {
+        console.log("Redirecionando manualmente para:", data.url);
+        window.location.href = data.url;
+      }
+      
       toast("Redirecionando para Google...", { 
         description: "Você será redirecionado para completar a autenticação." 
       });

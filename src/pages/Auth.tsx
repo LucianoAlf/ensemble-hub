@@ -70,7 +70,9 @@ const Auth = () => {
                 type="button"
                 variant="outline"
                 disabled={loading}
-                onClick={async () => {
+                onClick={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setLoading(true);
                   try {
                     console.log("Auth: Iniciando login com Google...");
