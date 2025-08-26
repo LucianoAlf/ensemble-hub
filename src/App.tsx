@@ -10,6 +10,7 @@ import Bands from "./pages/Bands";
 import Events from "./pages/Events";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import Financeiro from "./pages/Financeiro";
 import { AuthProvider } from "@/contexts/AuthProvider";
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
 
@@ -47,6 +48,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Bands />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/financeiro"
+              element={
+                <ProtectedRoute>
+                  <Financeiro />
                 </ProtectedRoute>
               }
             />

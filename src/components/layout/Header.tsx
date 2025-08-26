@@ -1,5 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
-import { Music, LayoutGrid, Users, CalendarDays, LogOut } from "lucide-react";
+import { Music, LayoutGrid, Users, CalendarDays, DollarSign, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthProvider";
 
@@ -31,6 +31,11 @@ const Header = () => {
             `text-sm transition-colors hover:text-foreground ${isActive ? 'text-foreground' : 'text-muted-foreground'}`
           }>
             <span className="inline-flex items-center gap-2"><CalendarDays className="h-4 w-4"/>Eventos</span>
+          </NavLink>
+          <NavLink to="/financeiro" className={({isActive}) => 
+            `text-sm transition-colors hover:text-foreground ${isActive ? 'text-foreground' : 'text-muted-foreground'}`
+          }>
+            <span className="inline-flex items-center gap-2"><DollarSign className="h-4 w-4"/>Financeiro</span>
           </NavLink>
         </nav>
 

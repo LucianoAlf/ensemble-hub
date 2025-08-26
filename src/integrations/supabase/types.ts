@@ -864,6 +864,92 @@ export type Database = {
           },
         ]
       }
+      payouts: {
+        Row: {
+          amount: number
+          beneficiary_id: string | null
+          beneficiary_name: string
+          beneficiary_type: string
+          created_at: string | null
+          due_date: string
+          evento_id: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          receipt_url: string | null
+          settled_at: string | null
+          status: string | null
+          tenant_id: string
+          transaction_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          beneficiary_id?: string | null
+          beneficiary_name: string
+          beneficiary_type: string
+          created_at?: string | null
+          due_date: string
+          evento_id: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          receipt_url?: string | null
+          settled_at?: string | null
+          status?: string | null
+          tenant_id: string
+          transaction_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          beneficiary_id?: string | null
+          beneficiary_name?: string
+          beneficiary_type?: string
+          created_at?: string | null
+          due_date?: string
+          evento_id?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          receipt_url?: string | null
+          settled_at?: string | null
+          status?: string | null
+          tenant_id?: string
+          transaction_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payouts_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "evento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_eventos_proximos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_eventos_todos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -887,6 +973,102 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      transactions: {
+        Row: {
+          attachment_url: string | null
+          banda_id: string | null
+          category: string
+          counterparty: string | null
+          created_at: string | null
+          description: string | null
+          evento_id: string | null
+          fee_amount: number | null
+          gross_amount: number
+          id: string
+          net_amount: number | null
+          settled_at: string | null
+          status: string | null
+          tenant_id: string
+          transaction_date: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          attachment_url?: string | null
+          banda_id?: string | null
+          category: string
+          counterparty?: string | null
+          created_at?: string | null
+          description?: string | null
+          evento_id?: string | null
+          fee_amount?: number | null
+          gross_amount: number
+          id?: string
+          net_amount?: number | null
+          settled_at?: string | null
+          status?: string | null
+          tenant_id: string
+          transaction_date: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          attachment_url?: string | null
+          banda_id?: string | null
+          category?: string
+          counterparty?: string | null
+          created_at?: string | null
+          description?: string | null
+          evento_id?: string | null
+          fee_amount?: number | null
+          gross_amount?: number
+          id?: string
+          net_amount?: number | null
+          settled_at?: string | null
+          status?: string | null
+          tenant_id?: string
+          transaction_date?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "evento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_eventos_proximos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_eventos_todos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       unidade: {
         Row: {
