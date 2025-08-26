@@ -1,159 +1,96 @@
-import React, { useState, useRef } from "react";
-import { Search, AlertCircle, MapPin } from "lucide-react";
+import React, { useEffect, useRef } from "react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { usePlacesInput } from "@/hooks/usePlacesInput";
-import { getEnvironmentInfo } from "@/lib/environmentUtils";
+import { loadGoogleMaps } from "@/lib/googleMapsLoader";
 
-declare namespace google.maps.places {
-  interface PlaceResult {
-    place_id?: string;
-    name?: string;
-    formatted_address?: string;
-    geometry?: any;
-  }
+
+interface LocationData { 
+  name: string; 
+  address: string; 
+  place_id: string; 
 }
 
-interface LocationData {
-  name: string;
-  address: string;
-  place_id: string;
-}
-
-interface LocationAutocompleteProps {
+interface Props {
   onLocationSelect: (location: LocationData) => void;
   initialLocation?: string;
   initialAddress?: string;
   disabled?: boolean;
 }
 
+const isPreview = /lovable\.dev|^id-preview--|^preview--/.test(location.host);
+
 export function LocationAutocomplete({
   onLocationSelect,
   initialLocation = "",
   initialAddress = "",
   disabled = false,
-}: LocationAutocompleteProps) {
-  const [query, setQuery] = useState(initialLocation);
-  const [error, setError] = useState<string | null>(null);
-  const [showFallback, setShowFallback] = useState(false);
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  
-  const envInfo = getEnvironmentInfo();
 
-  // Show fallback if Google Places is not available
-  React.useEffect(() => {
-    if (!envInfo.canUseGooglePlaces) {
-      setShowFallback(true);
-    }
-  }, [envInfo.canUseGooglePlaces]);
+  useEffect(() => {
+    if (isPreview) return; // evita erro no sandbox/preview (key bloqueia)
+    const KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY as string;
 
-  const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
-    if (!place.name || !place.formatted_address || !place.place_id) {
-      setError('Dados incompletos do local selecionado');
-      return;
-    }
+    let ac: any = null;
+    let sub: any = null;
 
-    const locationData: LocationData = {
-      name: place.name,
-      address: place.formatted_address,
-      place_id: place.place_id
+    (async () => {
+      await loadGoogleMaps(KEY);
+      const { Autocomplete, Place } =
+        (await ((window as any).google.maps as any).importLibrary("places")) as any;
+
+      if (!inputRef.current) return;
+
+      ac = new Autocomplete(inputRef.current, {
+        fields: ["place_id", "name", "formatted_address", "geometry"],
+        componentRestrictions: { country: "br" },
+      });
+
+      sub = ac.addListener("place_changed", async () => {
+        const base = ac!.getPlace();
+        if (!base?.place_id) return;
+
+        // Se o autocomplete não trouxe tudo, completa com Place().fetchFields()
+        if (!base.formatted_address || !base.geometry) {
+          const p = new ((window as any).google.maps.places as any).Place({ id: base.place_id });
+          await p.fetchFields({ fields: ["name","formatted_address","geometry"] });
+          onLocationSelect({
+            name: p.displayName || p.name || base.name || "",
+            address: p.formattedAddress || base.formatted_address || "",
+            place_id: base.place_id,
+          });
+          return;
+        }
+
+        onLocationSelect({
+          name: base.name || "",
+          address: base.formatted_address || "",
+          place_id: base.place_id,
+        });
+      });
+    })();
+
+    return () => {
+      sub?.remove();
+      if (ac) ((window as any).google.maps.event as any).clearInstanceListeners(ac);
     };
-
-    setQuery(place.name);
-    setError(null);
-    onLocationSelect(locationData);
-  };
-
-  const handlePlacesError = () => {
-    setShowFallback(true);
-    setError(null);
-  };
-
-  // Only use Google Places if environment supports it
-  const shouldUsePlaces = envInfo.canUseGooglePlaces && !showFallback;
-  
-  usePlacesInput(
-    shouldUsePlaces ? inputRef.current : null, 
-    handlePlaceSelect,
-    handlePlacesError
-  );
-
-  const handleInputChange = (value: string) => {
-    setQuery(value);
-    setError(null);
-  };
-
-  const handleFallbackSubmit = () => {
-    if (!query.trim()) {
-      setError('Por favor, digite o nome do local');
-      return;
-    }
-
-    const locationData: LocationData = {
-      name: query.trim(),
-      address: query.trim(),
-      place_id: `manual_${Date.now()}`
-    };
-
-    onLocationSelect(locationData);
-  };
+  }, [onLocationSelect]);
 
   return (
     <div className="space-y-2 relative">
-      <Label htmlFor="location">
-        Local do Evento
-        <span className="text-destructive ml-1">*</span>
-      </Label>
-      
+      <Label htmlFor="location">Local do Evento <span className="text-destructive ml-1">*</span></Label>
       <div className="relative">
-        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-          {error ? (
-            <AlertCircle className="h-4 w-4 text-destructive" />
-          ) : (
-            <Search className="h-4 w-4" />
-          )}
-        </div>
-        
+        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
         <Input
-          ref={inputRef}
           id="location"
-          type="text"
-          value={query}
-          onChange={(e) => handleInputChange(e.target.value)}
-          placeholder="Digite o nome do local ou endereço..."
-          className="pl-10"
-          disabled={disabled}
+          ref={inputRef}
+          defaultValue={initialLocation}
+          placeholder={isPreview ? "Abra o site publicado para usar o Google Places" : "Digite o nome do local..."}
+          disabled={disabled || isPreview}
+          className="pl-9"
         />
       </div>
-
-      {/* Environment info for development */}
-      {!envInfo.canUseGooglePlaces && (
-        <Alert className="mt-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Google Places não disponível em ambiente de desenvolvimento. Digite o local manualmente.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Fallback mode info */}
-      {showFallback && envInfo.canUseGooglePlaces && (
-        <Alert className="mt-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Autocomplete indisponível. Digite o local manualmente.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Error message */}
-      {error && (
-        <Alert className="mt-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 }
