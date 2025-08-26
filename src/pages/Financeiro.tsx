@@ -1,23 +1,12 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Plus, DollarSign, TrendingUp, TrendingDown, FileText, Download, Upload } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { FinanceFilters } from "@/components/finance/FinanceFilters";
-import { KpiBar } from "@/components/finance/KpiBar";
-import { TransactionsTable } from "@/components/finance/TransactionsTable";
-import { PendingPayoutsPanel } from "@/components/finance/PendingPayoutsPanel";
-import { EventsSummaryPanel } from "@/components/finance/EventsSummaryPanel";
-import { UpsertIncomeDrawer } from "@/components/finance/drawers/UpsertIncomeDrawer";
-import { UpsertExpenseDrawer } from "@/components/finance/drawers/UpsertExpenseDrawer";
-import { UpsertPayoutDrawer } from "@/components/finance/drawers/UpsertPayoutDrawer";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FinanceDashboard from "@/components/finance/FinanceDashboard";
+import FinanceMovements from "@/components/finance/FinanceMovements";
+import FinanceReports from "@/components/finance/FinanceReports";
+import CompactFilters from "@/components/finance/CompactFilters";
 import { useSEO } from "@/hooks/useSEO";
 
 const Financeiro = () => {
-  const [incomeDrawerOpen, setIncomeDrawerOpen] = useState(false);
-  const [expenseDrawerOpen, setExpenseDrawerOpen] = useState(false);
-  const [payoutDrawerOpen, setPayoutDrawerOpen] = useState(false);
-
   useSEO({
     title: "Financeiro - LA Music Hub",
     description: "Controle financeiro completo para bandas e eventos musicais"
@@ -26,81 +15,35 @@ const Financeiro = () => {
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Financeiro</h1>
-          <p className="text-muted-foreground">
-            Controle de receitas, despesas e cachês do sistema
-          </p>
-        </div>
-        
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setIncomeDrawerOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Receita
-          </Button>
-          <Button onClick={() => setExpenseDrawerOpen(true)} variant="outline" className="gap-2">
-            <Plus className="h-4 w-4" />
-            Despesa
-          </Button>
-          <Button onClick={() => setPayoutDrawerOpen(true)} variant="outline" className="gap-2">
-            <Plus className="h-4 w-4" />
-            Cachê/Repasse
-          </Button>
-          <Button variant="ghost" className="gap-2">
-            <Upload className="h-4 w-4" />
-            Importar CSV
-          </Button>
-          <Button variant="ghost" className="gap-2">
-            <Download className="h-4 w-4" />
-            Exportar
-          </Button>
-        </div>
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight">Financeiro</h1>
+        <p className="text-muted-foreground">
+          Controle de receitas, despesas e cachês do sistema
+        </p>
       </div>
 
-      {/* Filters */}
-      <FinanceFilters />
+      {/* Navigation Tabs */}
+      <Tabs defaultValue="dashboard" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="movements">Movimentações</TabsTrigger>
+          <TabsTrigger value="reports">Relatórios</TabsTrigger>
+        </TabsList>
 
-      {/* KPIs */}
-      <KpiBar />
+        <TabsContent value="dashboard" className="space-y-6">
+          <FinanceDashboard />
+        </TabsContent>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
-        {/* Transactions Table */}
-        <div className="xl:col-span-3">
-          <Card>
-            <CardHeader>
-              <CardTitle>Movimentações</CardTitle>
-              <CardDescription>
-                Histórico de receitas, despesas e cachês
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TransactionsTable />
-            </CardContent>
-          </Card>
-        </div>
+        <TabsContent value="movements" className="space-y-6">
+          <CompactFilters />
+          <FinanceMovements />
+        </TabsContent>
 
-        {/* Side Panels */}
-        <div className="space-y-6">
-          <PendingPayoutsPanel />
-          <EventsSummaryPanel />
-        </div>
-      </div>
-
-      {/* Drawers */}
-      <UpsertIncomeDrawer 
-        open={incomeDrawerOpen} 
-        onOpenChange={setIncomeDrawerOpen}
-      />
-      <UpsertExpenseDrawer 
-        open={expenseDrawerOpen} 
-        onOpenChange={setExpenseDrawerOpen}
-      />
-      <UpsertPayoutDrawer 
-        open={payoutDrawerOpen} 
-        onOpenChange={setPayoutDrawerOpen}
-      />
+        <TabsContent value="reports" className="space-y-6">
+          <CompactFilters />
+          <FinanceReports />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
