@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Plus, Search, Users, Loader2 } from "lucide-react";
 import { CreateBandDialog } from "@/components/bands/CreateBandDialog";
-import { EditBandDialog } from "@/components/bands/EditBandDialog";
-import { ViewBandDialog } from "@/components/bands/ViewBandDialog";
+import { CompleteBandDialog } from "@/components/bands/CompleteBandDialog";
 import { useSupabaseOptimized } from "@/hooks/useSupabaseOptimized";
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,9 +30,7 @@ const Bands = () => {
   const [bands, setBands] = useState<Band[]>([]);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [viewOpen, setViewOpen] = useState(false);
-  const [selectedBand, setSelectedBand] = useState<Band | null>(null);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { query: querySupabase } = useSupabaseOptimized();
@@ -97,18 +94,18 @@ const Bands = () => {
 
   const handleViewBand = (band: Band) => {
     setSelectedBandId(band.id);
-    setViewOpen(true);
+    setCompleteDialogOpen(true);
   };
 
-  const handleEditBand = (band: Band) => {
-    setSelectedBand(band);
-    setEditOpen(true);
-  };
-
-  const handleUpdateBand = (updatedBand: Band) => {
+  const handleUpdateBand = (updatedBand: any) => {
     setBands(prevBands => 
       prevBands.map(band => 
-        band.id === updatedBand.id ? updatedBand : band
+        band.id === updatedBand.id ? { 
+          ...band, 
+          name: updatedBand.nome || band.name,
+          genre: updatedBand.genero || band.genre,
+          description: updatedBand.descricao || band.description
+        } : band
       )
     );
   };
@@ -187,15 +184,11 @@ const Bands = () => {
           window.location.reload();
         }} 
       />
-      <ViewBandDialog 
-        open={viewOpen} 
-        onOpenChange={setViewOpen} 
+      <CompleteBandDialog 
+        open={completeDialogOpen} 
+        onOpenChange={setCompleteDialogOpen} 
         bandId={selectedBandId} 
-      />
-      <EditBandDialog 
-        open={editOpen} 
-        onOpenChange={setEditOpen} 
-        band={selectedBand} 
+        mode="view"
         onBandUpdated={handleUpdateBand} 
       />
     </main>
