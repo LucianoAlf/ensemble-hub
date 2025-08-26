@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSupabaseOptimized } from "@/hooks/useSupabaseOptimized";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { escapePreview } from "@/lib/escapePreview";
 
 export type EventItem = {
   id: string;
@@ -54,6 +55,11 @@ export default function Events() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { query: querySupabase } = useSupabaseOptimized();
+
+  // Escape preview/sandbox to production
+  useEffect(() => {
+    escapePreview();
+  }, []);
 
   useEffect(() => {
     let mounted = true;

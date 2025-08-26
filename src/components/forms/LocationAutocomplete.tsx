@@ -41,6 +41,13 @@ export function LocationAutocomplete({
   
   const envInfo = getEnvironmentInfo();
 
+  // Show fallback if Google Places is not available
+  React.useEffect(() => {
+    if (!envInfo.canUseGooglePlaces) {
+      setShowFallback(true);
+    }
+  }, [envInfo.canUseGooglePlaces]);
+
   const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
     if (!place.name || !place.formatted_address || !place.place_id) {
       setError('Dados incompletos do local selecionado');
