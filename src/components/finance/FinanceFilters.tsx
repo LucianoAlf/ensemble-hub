@@ -13,8 +13,8 @@ export const FinanceFilters = () => {
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date())
   });
-  const [selectedBand, setSelectedBand] = useState<string>("");
-  const [selectedEvent, setSelectedEvent] = useState<string>("");
+  const [selectedBand, setSelectedBand] = useState<string>("all");
+  const [selectedEvent, setSelectedEvent] = useState<string>("all");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,14 +38,14 @@ export const FinanceFilters = () => {
       from: startOfMonth(new Date()),
       to: endOfMonth(new Date())
     });
-    setSelectedBand("");
-    setSelectedEvent("");
+    setSelectedBand("all");
+    setSelectedEvent("all");
     setSelectedCategories([]);
     setSelectedStatus("all");
     setSearchQuery("");
   };
 
-  const hasActiveFilters = selectedBand || selectedEvent || selectedCategories.length > 0 || selectedStatus !== "all" || searchQuery;
+  const hasActiveFilters = selectedBand !== "all" || selectedEvent !== "all" || selectedCategories.length > 0 || selectedStatus !== "all" || searchQuery;
 
   return (
     <Card className="p-4">
@@ -66,7 +66,7 @@ export const FinanceFilters = () => {
               <SelectValue placeholder="Todas as bandas" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as bandas</SelectItem>
+              <SelectItem value="all">Todas as bandas</SelectItem>
               {/* TODO: Load bands from database */}
               <SelectItem value="banda1">Banda Exemplo 1</SelectItem>
               <SelectItem value="banda2">Banda Exemplo 2</SelectItem>
@@ -78,7 +78,7 @@ export const FinanceFilters = () => {
               <SelectValue placeholder="Todos os eventos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os eventos</SelectItem>
+              <SelectItem value="all">Todos os eventos</SelectItem>
               {/* TODO: Load events from database */}
               <SelectItem value="evento1">Evento Exemplo 1</SelectItem>
               <SelectItem value="evento2">Evento Exemplo 2</SelectItem>
