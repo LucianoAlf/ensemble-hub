@@ -780,6 +780,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fk_evento_banda_evento"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_eventos_todos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fk_evento_banda_evento_id"
             columns: ["evento_id"]
             isOneToOne: false
@@ -791,6 +798,13 @@ export type Database = {
             columns: ["evento_id"]
             isOneToOne: false
             referencedRelation: "vw_eventos_proximos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_banda_evento_id"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_eventos_todos"
             referencedColumns: ["id"]
           },
         ]
@@ -839,6 +853,13 @@ export type Database = {
             columns: ["evento_id"]
             isOneToOne: false
             referencedRelation: "vw_eventos_proximos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "vw_eventos_todos"
             referencedColumns: ["id"]
           },
         ]
@@ -956,6 +977,62 @@ export type Database = {
           local: string | null
           orcamento: number | null
           sala_id: string | null
+          status: string | null
+          tenant_id: string | null
+          tipo: string | null
+          titulo: string | null
+          unidade_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evento_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evento_banda_id_fkey"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "banda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_banda"
+            columns: ["banda_id"]
+            isOneToOne: false
+            referencedRelation: "vw_bandas_lista"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_evento_unidade"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "unidade"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_eventos_todos: {
+        Row: {
+          banda_id: string | null
+          banda_nome: string | null
+          created_at: string | null
+          descricao: string | null
+          endereco: string | null
+          fim: string | null
+          id: string | null
+          inicio: string | null
+          local: string | null
+          orcamento: number | null
           status: string | null
           tenant_id: string | null
           tipo: string | null
