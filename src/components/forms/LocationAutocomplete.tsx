@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
-import { MapPin, Search } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { MapPin, Search, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PlacePrediction {
   place_id: string;
@@ -45,13 +46,28 @@ export function LocationAutocomplete({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoaded, setGoogleLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const autocompleteServiceRef = useRef<any>(null);
   const placesServiceRef = useRef<any>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const requestAbortRef = useRef<boolean>(false);
 
   useEffect(() => {
     const loadGooglePlaces = async () => {
-      if (window.google && window.google.maps) {
+      // Check if API key is configured
+      const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
+      if (!apiKey) {
+        console.error("Google Places API key not configured");
+        setError("Configuração da API do Google Places não encontrada");
+        return;
+      }
+
+      // Check if Google Maps is already loaded
+      if (window.google && window.google.maps && window.google.maps.places) {
+        console.log("Google Places API already loaded");
         setGoogleLoaded(true);
+        setError(null);
         autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
         placesServiceRef.current = new window.google.maps.places.PlacesService(
           document.createElement('div')
@@ -59,32 +75,56 @@ export function LocationAutocomplete({
         return;
       }
 
+      console.log("Loading Google Places API...");
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_PLACES_API_KEY}&libraries=places&language=pt-BR&region=BR`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=pt-BR&region=BR&loading=async`;
       script.async = true;
       script.defer = true;
       
       script.onload = () => {
+        console.log("Google Places API loaded successfully");
         setGoogleLoaded(true);
+        setError(null);
+        setRetryCount(0);
         autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
         placesServiceRef.current = new window.google.maps.places.PlacesService(
           document.createElement('div')
         );
       };
 
+      script.onerror = () => {
+        console.error("Failed to load Google Places API");
+        setError("Erro ao carregar a API do Google Places");
+        setGoogleLoaded(false);
+        
+        // Retry logic with exponential backoff
+        if (retryCount < 3) {
+          const retryDelay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            script.remove();
+            loadGooglePlaces();
+          }, retryDelay);
+        }
+      };
+
       document.head.appendChild(script);
     };
 
     loadGooglePlaces();
-  }, []);
+  }, [retryCount]);
 
-  const searchPlaces = async (input: string) => {
+  const searchPlaces = useCallback(async (input: string) => {
     if (!googleLoaded || !autocompleteServiceRef.current || input.length < 3) {
       setPredictions([]);
+      setIsLoading(false);
       return;
     }
 
+    // Cancel previous request
+    requestAbortRef.current = true;
     setIsLoading(true);
+    setError(null);
 
     const request = {
       input,
@@ -92,32 +132,73 @@ export function LocationAutocomplete({
       types: ["establishment", "geocode"],
     };
 
-    autocompleteServiceRef.current.getPlacePredictions(
-      request,
-      (predictions: PlacePrediction[] | null, status: string) => {
-        setIsLoading(false);
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-          setPredictions(predictions.slice(0, 5));
-        } else {
-          setPredictions([]);
+    // Reset abort flag for current request
+    requestAbortRef.current = false;
+
+    try {
+      autocompleteServiceRef.current.getPlacePredictions(
+        request,
+        (predictions: PlacePrediction[] | null, status: string) => {
+          // Check if request was aborted
+          if (requestAbortRef.current) {
+            return;
+          }
+
+          setIsLoading(false);
+          
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+            console.log(`Found ${predictions.length} place predictions`);
+            setPredictions(predictions.slice(0, 5));
+            setError(null);
+          } else if (status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+            console.log("No place predictions found");
+            setPredictions([]);
+            setError(null);
+          } else {
+            console.error("Places API error:", status);
+            setPredictions([]);
+            setError("Erro ao buscar locais. Tente novamente.");
+          }
         }
-      }
-    );
-  };
+      );
+    } catch (err) {
+      console.error("Error calling Places API:", err);
+      setIsLoading(false);
+      setPredictions([]);
+      setError("Erro na busca de locais");
+    }
+  }, [googleLoaded]);
 
   const handleInputChange = (value: string) => {
     setQuery(value);
     setShowSuggestions(true);
+    setError(null);
+    
+    // Clear previous debounce timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
     
     if (value.length >= 3) {
-      searchPlaces(value);
+      // Debounce search requests
+      debounceTimeoutRef.current = setTimeout(() => {
+        searchPlaces(value);
+      }, 300);
     } else {
       setPredictions([]);
+      setIsLoading(false);
     }
   };
 
   const handlePlaceSelect = (prediction: PlacePrediction) => {
-    if (!placesServiceRef.current) return;
+    if (!placesServiceRef.current) {
+      console.error("Places service not available");
+      setError("Serviço de lugares não disponível");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
 
     const request = {
       placeId: prediction.place_id,
@@ -127,6 +208,8 @@ export function LocationAutocomplete({
     placesServiceRef.current.getDetails(
       request,
       (place: any, status: string) => {
+        setIsLoading(false);
+        
         if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
           const locationData: LocationData = {
             name: place.name || prediction.structured_formatting.main_text,
@@ -134,10 +217,14 @@ export function LocationAutocomplete({
             place_id: place.place_id,
           };
 
+          console.log("Place selected:", locationData);
           setQuery(locationData.name);
           setShowSuggestions(false);
           setPredictions([]);
           onLocationSelect(locationData);
+        } else {
+          console.error("Place details error:", status);
+          setError("Erro ao obter detalhes do local");
         }
       }
     );
@@ -194,9 +281,22 @@ export function LocationAutocomplete({
         </Card>
       )}
 
-      {!googleLoaded && (
+      {error && (
+        <Alert className="mt-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {!googleLoaded && !error && (
         <p className="text-sm text-muted-foreground">
           Carregando sugestões de locais...
+        </p>
+      )}
+
+      {googleLoaded && !error && query.length > 0 && query.length < 3 && (
+        <p className="text-sm text-muted-foreground">
+          Digite pelo menos 3 caracteres para buscar locais...
         </p>
       )}
     </div>
