@@ -1,15 +1,11 @@
-import React, { useEffect, useRef } from "react";
-import { Search } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { loadGoogleMaps } from "@/lib/googleMapsLoader";
-
-
-interface LocationData { 
-  name: string; 
-  address: string; 
-  place_id: string; 
-}
+import { useGooglePlaces, type LocationData } from "@/hooks/useGooglePlaces";
+import { useDebounce } from "@/hooks/useDebounce";
+import { LocationSuggestions } from "./LocationSuggestions";
+import { getEnvironmentInfo } from "@/lib/environmentUtils";
 
 interface Props {
   onLocationSelect: (location: LocationData) => void;
@@ -18,79 +14,95 @@ interface Props {
   disabled?: boolean;
 }
 
-const isPreview = /lovable\.dev|^id-preview--|^preview--/.test(location.host);
-
 export function LocationAutocomplete({
   onLocationSelect,
   initialLocation = "",
   initialAddress = "",
   disabled = false,
 }: Props) {
+  const [query, setQuery] = useState(initialLocation);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  const { isLoaded, isLoading, predictions, searchPlaces, getPlaceDetails, canUseGooglePlaces } = useGooglePlaces();
+  const debouncedQuery = useDebounce(query, 300);
+  const env = getEnvironmentInfo();
 
-  useEffect(() => {
-    if (isPreview) return; // evita erro no sandbox/preview (key bloqueia)
-    const KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY as string;
+  React.useEffect(() => {
+    if (debouncedQuery && canUseGooglePlaces) {
+      searchPlaces(debouncedQuery);
+    }
+  }, [debouncedQuery, searchPlaces, canUseGooglePlaces]);
 
-    let ac: any = null;
-    let sub: any = null;
+  const handleInputChange = (value: string) => {
+    setQuery(value);
+    setShowSuggestions(true);
+  };
 
-    (async () => {
-      await loadGoogleMaps(KEY);
-      const { Autocomplete, Place } =
-        (await ((window as any).google.maps as any).importLibrary("places")) as any;
+  const handlePredictionSelect = async (prediction: any) => {
+    const locationData = await getPlaceDetails(prediction.place_id);
+    
+    if (locationData) {
+      setQuery(locationData.name);
+      setShowSuggestions(false);
+      onLocationSelect(locationData);
+    }
+  };
 
-      if (!inputRef.current) return;
+  const handleInputFocus = () => {
+    if (predictions.length > 0) {
+      setShowSuggestions(true);
+    }
+  };
 
-      ac = new Autocomplete(inputRef.current, {
-        fields: ["place_id", "name", "formatted_address", "geometry"],
-        componentRestrictions: { country: "br" },
-      });
+  const handleInputBlur = () => {
+    // Delay to allow clicking on suggestions
+    setTimeout(() => setShowSuggestions(false), 200);
+  };
 
-      sub = ac.addListener("place_changed", async () => {
-        const base = ac!.getPlace();
-        if (!base?.place_id) return;
-
-        // Se o autocomplete não trouxe tudo, completa com Place().fetchFields()
-        if (!base.formatted_address || !base.geometry) {
-          const p = new ((window as any).google.maps.places as any).Place({ id: base.place_id });
-          await p.fetchFields({ fields: ["name","formatted_address","geometry"] });
-          onLocationSelect({
-            name: p.displayName || p.name || base.name || "",
-            address: p.formattedAddress || base.formatted_address || "",
-            place_id: base.place_id,
-          });
-          return;
-        }
-
-        onLocationSelect({
-          name: base.name || "",
-          address: base.formatted_address || "",
-          place_id: base.place_id,
-        });
-      });
-    })();
-
-    return () => {
-      sub?.remove();
-      if (ac) ((window as any).google.maps.event as any).clearInstanceListeners(ac);
-    };
-  }, [onLocationSelect]);
+  const getPlaceholder = () => {
+    if (!canUseGooglePlaces) {
+      return env.isSandbox 
+        ? "Abra o site publicado para usar o Google Places"
+        : "Digite o nome do local...";
+    }
+    return isLoaded ? "Digite o nome do local..." : "Carregando Google Places...";
+  };
 
   return (
     <div className="space-y-2 relative">
-      <Label htmlFor="location">Local do Evento <span className="text-destructive ml-1">*</span></Label>
+      <Label htmlFor="location">
+        Local do Evento <span className="text-destructive ml-1">*</span>
+      </Label>
       <div className="relative">
         <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
         <Input
           id="location"
           ref={inputRef}
-          defaultValue={initialLocation}
-          placeholder={isPreview ? "Abra o site publicado para usar o Google Places" : "Digite o nome do local..."}
-          disabled={disabled || isPreview}
-          className="pl-9"
+          value={query}
+          onChange={(e) => handleInputChange(e.target.value)}
+          onFocus={handleInputFocus}
+          onBlur={handleInputBlur}
+          placeholder={getPlaceholder()}
+          disabled={disabled || (!isLoaded && canUseGooglePlaces)}
+          className="pl-9 pr-10"
         />
+        {isLoading && (
+          <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
+        )}
       </div>
+      
+      <LocationSuggestions
+        predictions={predictions}
+        onSelect={handlePredictionSelect}
+        isVisible={showSuggestions && canUseGooglePlaces}
+      />
+      
+      {!canUseGooglePlaces && env.isSandbox && (
+        <p className="text-sm text-muted-foreground">
+          💡 O Google Places funciona no site publicado
+        </p>
+      )}
     </div>
   );
 }

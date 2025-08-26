@@ -17,7 +17,7 @@ export function getEnvironmentInfo(): EnvironmentInfo {
     isProduction,
     isSandbox,
     isDevelopment,
-    canUseGooglePlaces: isProduction || (isDevelopment && hostname === 'localhost'), // Only prod and localhost
+    canUseGooglePlaces: isProduction || isDevelopment, // Allow in production and local development
     currentDomain: hostname
   };
 }
