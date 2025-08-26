@@ -13,11 +13,14 @@ export function getEnvironmentInfo(): EnvironmentInfo {
   const isSandbox = hostname.includes('sandbox.lovable.dev') || hostname.includes('lovable.dev');
   const isDevelopment = hostname === 'localhost' || hostname === '127.0.0.1';
   
+  // Only allow Google Places in production with proper domain restriction
+  const canUseGooglePlaces = isProduction && !isInIframe();
+  
   return {
     isProduction,
     isSandbox,
     isDevelopment,
-    canUseGooglePlaces: isProduction || isDevelopment, // Allow in production and local development
+    canUseGooglePlaces,
     currentDomain: hostname
   };
 }

@@ -27,12 +27,24 @@ export function useGooglePlaces() {
   const env = getEnvironmentInfo();
 
   useEffect(() => {
-    if (!env.canUseGooglePlaces) return;
+    if (!env.canUseGooglePlaces) {
+      console.log('Google Places disabled for this environment');
+      return;
+    }
 
     const initializeGooglePlaces = async () => {
       try {
         const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
-        if (!apiKey) return;
+        if (!apiKey) {
+          console.warn('Google Places API key not found');
+          return;
+        }
+
+        // Validate API key format
+        if (!apiKey.startsWith('AIza')) {
+          console.warn('Invalid Google Places API key format');
+          return;
+        }
 
         await loadGoogleMaps(apiKey);
         
@@ -41,8 +53,10 @@ export function useGooglePlaces() {
         setAutocompleteService(new AutocompleteService());
         setPlacesService(new PlacesService(document.createElement('div')));
         setIsLoaded(true);
+        console.log('Google Places initialized successfully');
       } catch (error) {
         console.error('Failed to load Google Places:', error);
+        // Don't set isLoaded to true if there's an error
       }
     };
 
