@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { MapPin, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +30,6 @@ interface LocationAutocompleteProps {
 declare global {
   interface Window {
     google: any;
-    initGooglePlaces: () => void;
   }
 }
 
@@ -45,31 +44,26 @@ export function LocationAutocomplete({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoaded, setGoogleLoaded] = useState(false);
-  const autocompleteServiceRef = useRef<any>(null);
-  const placesServiceRef = useRef<any>(null);
 
   useEffect(() => {
     const loadGooglePlaces = async () => {
       if (window.google && window.google.maps) {
         setGoogleLoaded(true);
-        autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
-        placesServiceRef.current = new window.google.maps.places.PlacesService(
-          document.createElement('div')
-        );
+        // Using new Places API instead of legacy AutocompleteService
         return;
       }
 
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&language=pt-BR&region=BR`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&language=pt-BR&region=BR&loading=async`;
       script.async = true;
       script.defer = true;
       
       script.onload = () => {
         setGoogleLoaded(true);
-        autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
-        placesServiceRef.current = new window.google.maps.places.PlacesService(
-          document.createElement('div')
-        );
+      };
+
+      script.onerror = (error) => {
+        console.error('Failed to load Google Maps API:', error);
       };
 
       document.head.appendChild(script);
@@ -79,30 +73,40 @@ export function LocationAutocomplete({
   }, []);
 
   const searchPlaces = async (input: string) => {
-    if (!googleLoaded || !autocompleteServiceRef.current || input.length < 3) {
+    if (!googleLoaded || !window.google?.maps?.places || input.length < 3) {
       setPredictions([]);
       return;
     }
 
     setIsLoading(true);
 
-    const request = {
-      input,
-      componentRestrictions: { country: "br" },
-      types: ["establishment", "geocode"],
-    };
+    try {
+      // Using new Places API with AutocompleteSuggestion
+      const { AutocompleteSuggestion } = await window.google.maps.importLibrary("places");
+      
+      const request = {
+        input,
+        componentRestrictions: { country: "br" },
+        types: ["establishment", "geocode"],
+      };
 
-    autocompleteServiceRef.current.getPlacePredictions(
-      request,
-      (predictions: PlacePrediction[] | null, status: string) => {
-        setIsLoading(false);
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-          setPredictions(predictions.slice(0, 5));
-        } else {
-          setPredictions([]);
+      const service = new window.google.maps.places.AutocompleteService();
+      service.getPlacePredictions(
+        request,
+        (predictions: PlacePrediction[] | null, status: string) => {
+          setIsLoading(false);
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setPredictions(predictions.slice(0, 5));
+          } else {
+            setPredictions([]);
+          }
         }
-      }
-    );
+      );
+    } catch (error) {
+      console.error('Error searching places:', error);
+      setIsLoading(false);
+      setPredictions([]);
+    }
   };
 
   const handleInputChange = (value: string) => {
@@ -116,31 +120,46 @@ export function LocationAutocomplete({
     }
   };
 
-  const handlePlaceSelect = (prediction: PlacePrediction) => {
-    if (!placesServiceRef.current) return;
+  const handlePlaceSelect = async (prediction: PlacePrediction) => {
+    if (!window.google?.maps?.places) return;
 
-    const request = {
-      placeId: prediction.place_id,
-      fields: ["name", "formatted_address", "place_id"],
-    };
+    try {
+      // Using new Places API with Place class
+      const { Place } = await window.google.maps.importLibrary("places");
+      
+      const place = new Place({
+        id: prediction.place_id,
+        requestedLanguage: 'pt-BR'
+      });
 
-    placesServiceRef.current.getDetails(
-      request,
-      (place: any, status: string) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
-          const locationData: LocationData = {
-            name: place.name || prediction.structured_formatting.main_text,
-            address: place.formatted_address || prediction.description,
-            place_id: place.place_id,
-          };
+      await place.fetchFields({
+        fields: ["displayName", "formattedAddress", "id"]
+      });
 
-          setQuery(locationData.name);
-          setShowSuggestions(false);
-          setPredictions([]);
-          onLocationSelect(locationData);
-        }
-      }
-    );
+      const locationData: LocationData = {
+        name: place.displayName || prediction.structured_formatting.main_text,
+        address: place.formattedAddress || prediction.description,
+        place_id: place.id || prediction.place_id,
+      };
+
+      setQuery(locationData.name);
+      setShowSuggestions(false);
+      setPredictions([]);
+      onLocationSelect(locationData);
+    } catch (error) {
+      console.error('Error getting place details:', error);
+      // Fallback to prediction data
+      const locationData: LocationData = {
+        name: prediction.structured_formatting.main_text,
+        address: prediction.description,
+        place_id: prediction.place_id,
+      };
+
+      setQuery(locationData.name);
+      setShowSuggestions(false);
+      setPredictions([]);
+      onLocationSelect(locationData);
+    }
   };
 
   return (
