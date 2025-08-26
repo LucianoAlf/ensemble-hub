@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from "react";
-import { MapPin, Search, AlertCircle } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Search, AlertCircle, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { usePlacesInput } from "@/hooks/usePlacesInput";
+import { getEnvironmentInfo } from "@/lib/environmentUtils";
 
 declare namespace google.maps.places {
   interface PlaceResult {
@@ -35,16 +36,10 @@ export function LocationAutocomplete({
 }: LocationAutocompleteProps) {
   const [query, setQuery] = useState(initialLocation);
   const [error, setError] = useState<string | null>(null);
+  const [showFallback, setShowFallback] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Domain protection - redirect if in preview/sandbox
-  useEffect(() => {
-    const CANON = 'https://ensemble-hub.lovable.app';
-    if (window.self !== window.top || /lovable\.dev|^id-preview--|^preview--/.test(location.host)) {
-      window.top!.location.replace(CANON + location.pathname + location.search + location.hash);
-      return;
-    }
-  }, []);
+  
+  const envInfo = getEnvironmentInfo();
 
   const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
     if (!place.name || !place.formatted_address || !place.place_id) {
@@ -63,11 +58,38 @@ export function LocationAutocomplete({
     onLocationSelect(locationData);
   };
 
-  usePlacesInput(inputRef.current, handlePlaceSelect);
+  const handlePlacesError = () => {
+    setShowFallback(true);
+    setError(null);
+  };
+
+  // Only use Google Places if environment supports it
+  const shouldUsePlaces = envInfo.canUseGooglePlaces && !showFallback;
+  
+  usePlacesInput(
+    shouldUsePlaces ? inputRef.current : null, 
+    handlePlaceSelect,
+    handlePlacesError
+  );
 
   const handleInputChange = (value: string) => {
     setQuery(value);
     setError(null);
+  };
+
+  const handleFallbackSubmit = () => {
+    if (!query.trim()) {
+      setError('Por favor, digite o nome do local');
+      return;
+    }
+
+    const locationData: LocationData = {
+      name: query.trim(),
+      address: query.trim(),
+      place_id: `manual_${Date.now()}`
+    };
+
+    onLocationSelect(locationData);
   };
 
   return (
@@ -97,6 +119,26 @@ export function LocationAutocomplete({
           disabled={disabled}
         />
       </div>
+
+      {/* Environment info for development */}
+      {!envInfo.canUseGooglePlaces && (
+        <Alert className="mt-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Google Places não disponível em ambiente de desenvolvimento. Digite o local manualmente.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Fallback mode info */}
+      {showFallback && envInfo.canUseGooglePlaces && (
+        <Alert className="mt-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Autocomplete indisponível. Digite o local manualmente.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Error message */}
       {error && (

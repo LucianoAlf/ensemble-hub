@@ -44,7 +44,8 @@ declare namespace google.maps {
 
 export function usePlacesInput(
   inputEl: HTMLInputElement | null,
-  onSelect: (place: google.maps.places.PlaceResult) => void
+  onSelect: (place: google.maps.places.PlaceResult) => void,
+  onError?: () => void
 ) {
   const subscriptionRef = useRef<google.maps.MapsEventListener | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -59,6 +60,7 @@ export function usePlacesInput(
         const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
         if (!apiKey) {
           console.error('❌ VITE_GOOGLE_PLACES_API_KEY não encontrada');
+          onError?.();
           return;
         }
 
@@ -102,6 +104,7 @@ export function usePlacesInput(
 
       } catch (error) {
         console.error('❌ Erro ao inicializar Places Input:', error);
+        onError?.();
       }
     })();
 
@@ -113,5 +116,5 @@ export function usePlacesInput(
         autocompleteRef.current = null;
       }
     };
-  }, [inputEl, onSelect]);
+  }, [inputEl, onSelect, onError]);
 }
