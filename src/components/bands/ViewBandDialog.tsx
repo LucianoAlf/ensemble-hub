@@ -2,14 +2,16 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useSupabaseOptimized } from "@/hooks/useSupabaseOptimized";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Edit, Users, Calendar } from "lucide-react";
 
 interface ViewBandDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bandId: string | null;
+  onEdit?: (band: Banda) => void;
 }
 
 interface Banda {
@@ -17,11 +19,13 @@ interface Banda {
   nome: string;
   genero?: string;
   descricao?: string;
+  logo_url?: string;
   created_at: string;
   ativa: boolean;
+  members_count?: number;
 }
 
-export function ViewBandDialog({ open, onOpenChange, bandId }: ViewBandDialogProps) {
+export function ViewBandDialog({ open, onOpenChange, bandId, onEdit }: ViewBandDialogProps) {
   const [band, setBand] = useState<Banda | null>(null);
   const [loading, setLoading] = useState(false);
   
@@ -40,10 +44,10 @@ export function ViewBandDialog({ open, onOpenChange, bandId }: ViewBandDialogPro
     setLoading(true);
     try {
       const { data: bandData, error: bandError } = await supabase
-        .from('banda')
+        .from('vw_bandas_lista')
         .select('*')
         .eq('id', bandId)
-        .single();
+        .maybeSingle();
       
       if (bandError) throw bandError;
       setBand(bandData);
@@ -128,12 +132,37 @@ export function ViewBandDialog({ open, onOpenChange, bandId }: ViewBandDialogPro
                 </div>
               )}
               
-              <div>
-                <h4 className="font-medium text-sm text-muted-foreground">Data de Criação</h4>
-                <p>{new Date(band.created_at).toLocaleDateString('pt-BR')}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Membros
+                  </h4>
+                  <p>{band.members_count || 0}</p>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Criada em
+                  </h4>
+                  <p>{new Date(band.created_at).toLocaleDateString('pt-BR')}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
+
+          {onEdit && (
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Fechar
+              </Button>
+              <Button onClick={() => onEdit(band)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Editar Banda
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

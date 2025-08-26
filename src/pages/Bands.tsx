@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Plus, Search, Users, Loader2 } from "lucide-react";
 import { CreateBandDialog } from "@/components/bands/CreateBandDialog";
 import { EditBandDialog } from "@/components/bands/EditBandDialog";
+import { ViewBandDialog } from "@/components/bands/ViewBandDialog";
 import { useSupabaseOptimized } from "@/hooks/useSupabaseOptimized";
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,7 +32,9 @@ const Bands = () => {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
   const [selectedBand, setSelectedBand] = useState<Band | null>(null);
+  const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { query: querySupabase } = useSupabaseOptimized();
   const { toast } = useToast();
@@ -92,6 +95,11 @@ const Bands = () => {
     b.genre?.toLowerCase().includes(query.toLowerCase())
   );
 
+  const handleViewBand = (band: Band) => {
+    setSelectedBandId(band.id);
+    setViewOpen(true);
+  };
+
   const handleEditBand = (band: Band) => {
     setSelectedBand(band);
     setEditOpen(true);
@@ -138,7 +146,7 @@ const Bands = () => {
             <Card 
               key={band.id} 
               className="group cursor-pointer transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary/20 active:scale-[0.98]"
-              onClick={() => handleEditBand(band)}
+              onClick={() => handleViewBand(band)}
             >
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -178,6 +186,11 @@ const Bands = () => {
           // Recarregar a lista de bandas após criação
           window.location.reload();
         }} 
+      />
+      <ViewBandDialog 
+        open={viewOpen} 
+        onOpenChange={setViewOpen} 
+        bandId={selectedBandId} 
       />
       <EditBandDialog 
         open={editOpen} 
