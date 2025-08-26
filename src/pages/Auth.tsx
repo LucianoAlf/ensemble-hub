@@ -70,15 +70,16 @@ const Auth = () => {
                 type="button"
                 variant="outline"
                 disabled={loading}
-                onClick={async () => {
+                onClick={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setLoading(true);
                   try {
                     console.log("Auth: Iniciando login com Google...");
-                    const { error } = await signInWithGoogle();
-                    if (error) {
-                      console.error("Auth: Erro no login com Google:", error);
-                    }
-                  } finally {
+                    await signInWithGoogle();
+                    // Não fazer nada após o redirecionamento
+                  } catch (error) {
+                    console.error("Auth: Erro no login com Google:", error);
                     setLoading(false);
                   }
                 }}
