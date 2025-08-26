@@ -2,11 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Google Places Autocomplete dropdown z-index fix */
-.pac-container {
-  z-index: 2147483647 !important;
-}
-
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
