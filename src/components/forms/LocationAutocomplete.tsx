@@ -29,7 +29,34 @@ interface LocationAutocompleteProps {
 
 declare global {
   interface Window {
-    google: any;
+    google: {
+      maps: {
+        places: {
+          AutocompleteService: new () => {
+            getPlacePredictions: (
+              request: {
+                input: string;
+                componentRestrictions?: { country: string };
+                types?: string[];
+              },
+              callback: (predictions: PlacePrediction[] | null, status: string) => void
+            ) => void;
+          };
+          PlacesServiceStatus: {
+            OK: string;
+          };
+        };
+        importLibrary: (library: string) => Promise<{
+          AutocompleteSuggestion?: new (...args: unknown[]) => unknown;
+          Place?: new (options: { id: string; requestedLanguage: string }) => {
+            fetchFields: (options: { fields: string[] }) => Promise<void>;
+            displayName?: string;
+            formattedAddress?: string;
+            id?: string;
+          };
+        }>;
+      };
+    };
   }
 }
 
