@@ -20,6 +20,24 @@ interface Band {
   members_count: number;
 }
 
+// Interface para os dados que vêm do Supabase
+interface BandaSupabase {
+  id: string;
+  nome: string;
+  genero: string | null;
+  descricao: string | null;
+  logo_url: string | null;
+  membros_count: number | null;
+}
+
+// Interface para banda atualizada
+interface BandaAtualizada {
+  id: string;
+  nome?: string;
+  genero?: string;
+  descricao?: string;
+}
+
 const Bands = () => {
   useSEO({
     title: "Bandas — LA Music Hub",
@@ -62,7 +80,7 @@ const Bands = () => {
 
         if (!mounted) return;
 
-        const mapped: Band[] = (res?.data || []).map((row: any) => ({
+        const mapped: Band[] = (res?.data || []).map((row: BandaSupabase) => ({
           id: row.id,
           name: row.nome,
           genre: row.genero || undefined,
@@ -71,7 +89,7 @@ const Bands = () => {
           members_count: Number(row.membros_count || 0),
         }));
         setBands(mapped);
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (err?.name === "AbortError") return;
         console.error("Erro ao carregar bandas:", err);
         toast({ title: "Erro ao carregar bandas", description: "Tente novamente mais tarde.", variant: "destructive" });
@@ -97,7 +115,7 @@ const Bands = () => {
     setCompleteDialogOpen(true);
   };
 
-  const handleUpdateBand = (updatedBand: any) => {
+  const handleUpdateBand = (updatedBand: BandaAtualizada) => {
     setBands(prevBands => 
       prevBands.map(band => 
         band.id === updatedBand.id ? { 

@@ -7,6 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSEO } from "@/hooks/useSEO";
 
+interface LocationState {
+  from?: {
+    pathname: string;
+  };
+}
+
 const Auth = () => {
   useSEO({
     title: "Entrar ou criar conta | LA Music Hub",
@@ -15,8 +21,9 @@ const Auth = () => {
   });
 
   const navigate = useNavigate();
-  const location = useLocation() as any;
-  const redirectTo = location?.state?.from?.pathname || "/dashboard";
+  const location = useLocation();
+  const locationState = location.state as LocationState | null;
+  const redirectTo = locationState?.from?.pathname || "/dashboard";
 
   const { signIn, signUp, signInWithGoogle, user, loading: authLoading } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");

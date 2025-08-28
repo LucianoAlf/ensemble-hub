@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } else {
       toast("Bem-vindo!", { description: "Login realizado com sucesso." });
     }
-    return { error: error as any };
+    return { error: error ? new Error(error.message) : null };
   };
 
   const signUp: AuthContextValue["signUp"] = async (email, password) => {
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } else {
       toast("Verifique seu e-mail", { description: "Enviamos um link de confirmação." });
     }
-    return { error: error as any };
+    return { error: error ? new Error(error.message) : null };
   };
 
   const signInWithGoogle: AuthContextValue["signInWithGoogle"] = async () => {
@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) {
         console.error("Erro no OAuth:", error);
         toast("Erro no login com Google", { description: error.message });
-        return { error: error as any };
+        return { error: error ? new Error(error.message) : null };
       }
 
       // Redirecionamento seguro
@@ -118,7 +118,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             toast("Erro no redirecionamento", { 
               description: "Por favor, permita pop-ups para este site." 
             });
-            return { error: new Error("Redirecionamento bloqueado") as any };
+            return { error: new Error("Redirecionamento bloqueado") };
           }
         }
       }
@@ -127,7 +127,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error("Erro ao fazer login com Google:", error);
       toast("Erro inesperado", { description: "Tente novamente." });
-      return { error: error as any };
+      return { error: error instanceof Error ? error : new Error(String(error)) };
     }
   };
 
@@ -138,7 +138,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } else {
       toast("Até breve", { description: "Você saiu da sua conta." });
     }
-    return { error: error as any };
+    return { error: error ? new Error(error.message) : null };
   };
 
   const value = useMemo<AuthContextValue>(() => ({ user, session, loading, signIn, signUp, signOut, signInWithGoogle }), [user, session, loading]);

@@ -15,20 +15,30 @@ interface QueryContext {
   client: typeof supabase;
 }
 
+interface CacheEntry<T = unknown> {
+  data: T;
+  expires: number;
+}
+
+interface QueryResult<T> {
+  data: T | null;
+  error: Error | null;
+}
+
 // Simple cache implementation
-const cache = new Map<string, { data: any; expires: number }>();
+const cache = new Map<string, CacheEntry>();
 
 export function useSupabaseOptimized() {
   const query = useCallback(
     async <T>(
-      queryFn: (context: QueryContext) => Promise<{ data: T; error: any }>,
+      queryFn: (context: QueryContext) => Promise<QueryResult<T>>,
       options?: QueryOptions
-    ): Promise<{ data: T; error: any }> => {
+    ): Promise<QueryResult<T>> => {
       const cacheKey = options?.cache?.key;
       
       // Check cache first
       if (cacheKey && options?.cache?.enabled) {
-        const cached = cache.get(cacheKey);
+        const cached = cache.get(cacheKey) as CacheEntry<T> | undefined;
         if (cached && Date.now() < cached.expires) {
           return { data: cached.data, error: null };
         }
@@ -47,7 +57,7 @@ export function useSupabaseOptimized() {
 
         return result;
       } catch (error) {
-        return { data: null as any, error };
+        return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
       }
     },
     []
@@ -55,12 +65,12 @@ export function useSupabaseOptimized() {
 
   const mutate = useCallback(
     async <T>(
-      mutateFn: (context: QueryContext) => Promise<{ data: T; error: any }>
-    ): Promise<{ data: T; error: any }> => {
+      mutateFn: (context: QueryContext) => Promise<QueryResult<T>>
+    ): Promise<QueryResult<T>> => {
       try {
         return await mutateFn({ client: supabase });
       } catch (error) {
-        return { data: null as any, error };
+        return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
       }
     },
     []

@@ -11,10 +11,29 @@ import { RepertoireForm, type RepertoireSongData } from "./forms/RepertoireForm"
 import { TechnicalRiderForm, type TechnicalRiderData } from "./forms/TechnicalRiderForm";
 import { StageMapForm, type StageMapData } from "./forms/StageMapForm";
 
+interface BandData {
+  id: string;
+  nome: string;
+  genero: string | null;
+  descricao: string | null;
+  unidade_id: string;
+  instagram: string | null;
+  facebook: string | null;
+  youtube: string | null;
+  spotify: string | null;
+  apple_music: string | null;
+  soundcloud: string | null;
+  bandcamp: string | null;
+  website: string | null;
+  tenant_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface CreateBandDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onBandCreated: (band: any) => void;
+  onBandCreated: (band: BandData) => void;
 }
 
 interface Unidade {
@@ -102,13 +121,6 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
     observacoes: ""
   });
 
-  // Load unidades on dialog open
-  useEffect(() => {
-    if (open && client) {
-      loadUnidades();
-    }
-  }, [open, client]);
-
   const loadUnidades = async () => {
     if (!client) return;
     
@@ -126,27 +138,34 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
     }
   };
 
-  const validateCurrentTab = (): boolean => {
+  // Load unidades on dialog open
+  useEffect(() => {
+    if (open && client) {
+      loadUnidades();
+    }
+  }, [open, client, loadUnidades]);
+
+  const validateCurrentTab = (showToast: boolean = true): boolean => {
     switch (currentTab) {
       case "info":
         if (!bandInfo.nome.trim()) {
-          toast.error("Nome da banda é obrigatório");
+          if (showToast) toast.error("Nome da banda é obrigatório");
           return false;
         }
         if (!bandInfo.unidade_id) {
-          toast.error("Selecione uma unidade");
+          if (showToast) toast.error("Selecione uma unidade");
           return false;
         }
         return true;
       
       case "members":
         if (members.length === 0) {
-          toast.error("Adicione pelo menos um integrante");
+          if (showToast) toast.error("Adicione pelo menos um integrante");
           return false;
         }
         for (const member of members) {
           if (!member.nome.trim() || !member.instrumento.trim() || !member.data_entrada) {
-            toast.error("Preencha os campos obrigatórios dos integrantes (nome, instrumento, data de entrada)");
+            if (showToast) toast.error("Preencha os campos obrigatórios dos integrantes (nome, instrumento, data de entrada)");
             return false;
           }
         }
@@ -380,16 +399,18 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
       
       // Reset all forms
       resetForms();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro detalhado ao criar banda:', error);
       
       let errorMessage = "Erro ao criar banda";
-      if (error.message?.includes('tenant_id')) {
-        errorMessage = "Erro de configuração do usuário. Entre em contato com o suporte.";
-      } else if (error.message?.includes('permission')) {
-        errorMessage = "Você não tem permissão para criar bandas.";
-      } else if (error.message) {
-        errorMessage = error.message;
+      if (error instanceof Error) {
+        if (error.message.includes('tenant_id')) {
+          errorMessage = "Erro de configuração do usuário. Entre em contato com o suporte.";
+        } else if (error.message.includes('permission')) {
+          errorMessage = "Você não tem permissão para criar bandas.";
+        } else {
+          errorMessage = error.message;
+        }
       }
       
       toast.error(errorMessage);
@@ -476,14 +497,16 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
         return members.length > 0 && members.every(m => m.nome && m.instrumento && m.data_entrada) ? "✓" : "!";
       case "repertoire":
         return repertoire.length > 0 ? `${repertoire.length}` : "0";
-      case "rider":
+      case "rider": {
         const hasRiderData = technicalRider.microfones_vocal > 0 || 
                             technicalRider.microfones_instrumento > 0 || 
                             technicalRider.descricao;
         return hasRiderData ? "✓" : "○";
-      case "stagemap":
+      }
+      case "stagemap": {
         const hasMapData = stageMap.posicao_vocal || stageMap.posicao_guitarra || stageMap.descricao;
         return hasMapData ? "✓" : "○";
+      }
       default:
         return "";
     }
@@ -598,7 +621,7 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
               <Button 
                 type="button" 
                 onClick={handleNext}
-                disabled={!validateCurrentTab()}
+                disabled={!validateCurrentTab(false)}
               >
                 Próximo
               </Button>
@@ -606,7 +629,7 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
               <Button 
                 type="button" 
                 onClick={handleSubmit} 
-                disabled={isLoading || !validateCurrentTab()}
+                disabled={isLoading || !validateCurrentTab(false)}
               >
                 {isLoading ? "Salvando..." : "Criar Banda"}
               </Button>

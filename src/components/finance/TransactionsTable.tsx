@@ -1,56 +1,20 @@
-import { useState } from "react";
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Check, Trash2, Music, Calendar } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { MoreHorizontal, Edit, CheckCircle, Trash2 } from "lucide-react";
+import { EditableField } from "./EditableField";
+import { useFinancialData } from "@/hooks/useFinancialData";
+import { Skeleton } from "@/components/ui/skeleton";
 
-interface Transaction {
-  id: string;
-  date: Date;
-  type: 'income' | 'expense';
-  category: string;
-  description: string;
-  event?: string;
-  band?: string;
-  counterparty?: string;
-  amount: number;
-  status: 'pending' | 'scheduled' | 'settled';
-}
 
-export const TransactionsTable = () => {
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  // TODO: Load real data from database
-  const transactions: Transaction[] = [
-    {
-      id: "1",
-      date: new Date(),
-      type: "income",
-      category: "Ingressos",
-      description: "Venda de ingressos - Show do Rock",
-      event: "Show do Rock",
-      band: "Banda XYZ",
-      counterparty: "Eventbrite",
-      amount: 5000.00,
-      status: "settled"
-    },
-    {
-      id: "2",
-      date: new Date(),
-      type: "expense", 
-      category: "Transporte",
-      description: "Combustível para o show",
-      event: "Show do Rock",
-      band: "Banda XYZ",
-      counterparty: "Posto Shell",
-      amount: 300.00,
-      status: "pending"
-    }
-  ];
+const TransactionsTable = () => {
+  const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
+  const { transactions, loading, error, updateTransaction, deleteTransaction } = useFinancialData();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -59,71 +23,132 @@ export const TransactionsTable = () => {
     }).format(value);
   };
 
+  const formatDate = (dateString: string) => {
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(new Date(dateString));
+  };
+
   const getStatusBadge = (status: string) => {
     const variants = {
-      pending: { variant: "outline" as const, label: "Pendente" },
-      scheduled: { variant: "secondary" as const, label: "Agendado" },
-      settled: { variant: "default" as const, label: "Pago/Recebido" }
+      paid: 'default',
+      pending: 'secondary',
+      cancelled: 'destructive'
+    } as const;
+
+    const labels = {
+      paid: 'Pago',
+      pending: 'Pendente',
+      cancelled: 'Cancelado'
     };
-    
-    const config = variants[status as keyof typeof variants];
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+
+    return (
+      <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
+        {labels[status as keyof typeof labels] || status}
+      </Badge>
+    );
   };
 
   const handleSelectRow = (id: string, checked: boolean) => {
     if (checked) {
-      setSelectedRows([...selectedRows, id]);
+      setSelectedTransactions([...selectedTransactions, id]);
     } else {
-      setSelectedRows(selectedRows.filter(rowId => rowId !== id));
+      setSelectedTransactions(selectedTransactions.filter(rowId => rowId !== id));
     }
   };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedRows(transactions.map(t => t.id));
+      setSelectedTransactions(transactions.map(t => t.id));
     } else {
-      setSelectedRows([]);
+      setSelectedTransactions([]);
     }
   };
 
-  return (
-    <div className="space-y-4">
-      {/* Bulk Actions */}
-      {selectedRows.length > 0 && (
-        <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-          <span className="text-sm text-muted-foreground">
-            {selectedRows.length} item(s) selecionado(s)
-          </span>
-          <Button size="sm" variant="outline" className="gap-2">
-            <Check className="h-4 w-4" />
-            Marcar como pago
-          </Button>
-          <Button size="sm" variant="outline" className="gap-2">
-            <Trash2 className="h-4 w-4" />
-            Excluir
-          </Button>
-        </div>
-      )}
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Movimentações Financeiras</CardTitle>
+          <CardDescription>Carregando transações...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center space-x-4">
+                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
-      {/* Table */}
-      <div className="rounded-md border">
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Movimentações Financeiras</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center text-red-500 py-8">
+            Erro ao carregar transações: {error}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Movimentações Financeiras</CardTitle>
+            <CardDescription>
+              Histórico completo de receitas e despesas
+            </CardDescription>
+          </div>
+          {selectedTransactions.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {selectedTransactions.length} selecionado(s)
+              </span>
+              <Button variant="outline" size="sm">
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Marcar como Pago
+              </Button>
+              <Button variant="outline" size="sm">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
+              </Button>
+            </div>
+          )}
+        </div>
+      </CardHeader>
+
+      <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
-                <Checkbox
-                  checked={selectedRows.length === transactions.length}
+                <Checkbox 
+                  checked={selectedTransactions.length === transactions.length && transactions.length > 0}
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
               <TableHead>Data</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Categoria</TableHead>
               <TableHead>Descrição</TableHead>
-              <TableHead>Evento</TableHead>
-              <TableHead>Banda</TableHead>
-              <TableHead>Contraparte</TableHead>
-              <TableHead className="text-right">Valor</TableHead>
+              <TableHead>Categoria</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead>Valor</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
@@ -132,46 +157,45 @@ export const TransactionsTable = () => {
             {transactions.map((transaction) => (
               <TableRow key={transaction.id}>
                 <TableCell>
-                  <Checkbox
-                    checked={selectedRows.includes(transaction.id)}
+                  <Checkbox 
+                    checked={selectedTransactions.includes(transaction.id)}
                     onCheckedChange={(checked) => handleSelectRow(transaction.id, checked as boolean)}
                   />
                 </TableCell>
-                <TableCell className="font-medium">
-                  {format(transaction.date, "dd/MM/yyyy", { locale: ptBR })}
+                <TableCell>
+                  {formatDate(transaction.created_at)}
+                </TableCell>
+                <TableCell>
+                  <EditableField
+                    value={transaction.description}
+                    type="text"
+                    onSave={(newValue) => updateTransaction(transaction.id, { description: newValue })}
+                    className="font-medium"
+                    label="Descrição da transação"
+                  />
+                </TableCell>
+                <TableCell>
+                  <EditableField
+                    value={transaction.category}
+                    type="text"
+                    onSave={(newValue) => updateTransaction(transaction.id, { category: newValue })}
+                    label="Categoria"
+                  />
                 </TableCell>
                 <TableCell>
                   <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'}>
                     {transaction.type === 'income' ? 'Receita' : 'Despesa'}
                   </Badge>
                 </TableCell>
-                <TableCell>{transaction.category}</TableCell>
-                <TableCell className="max-w-[200px] truncate">
-                  {transaction.description}
-                </TableCell>
-                <TableCell>
-                  {transaction.event && (
-                    <Badge variant="outline" className="gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {transaction.event}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {transaction.band && (
-                    <Badge variant="outline" className="gap-1">
-                      <Music className="h-3 w-3" />
-                      {transaction.band}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {transaction.counterparty}
-                </TableCell>
-                <TableCell className="text-right font-medium">
-                  <span className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}>
-                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                  </span>
+                <TableCell className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}>
+                  <EditableField
+                    value={transaction.amount}
+                    type="currency"
+                    onSave={(newValue) => updateTransaction(transaction.id, { amount: newValue })}
+                    className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}
+                    prefix={transaction.type === 'income' ? '+' : '-'}
+                    label="Valor da transação"
+                  />
                 </TableCell>
                 <TableCell>
                   {getStatusBadge(transaction.status)}
@@ -179,21 +203,26 @@ export const TransactionsTable = () => {
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Button variant="ghost" size="sm">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem className="gap-2">
-                        <Edit className="h-4 w-4" />
+                      <DropdownMenuItem>
+                        <Edit className="h-4 w-4 mr-2" />
                         Editar
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="gap-2">
-                        <Check className="h-4 w-4" />
-                        Marcar como pago
+                      <DropdownMenuItem
+                        onClick={() => updateTransaction(transaction.id, { status: 'paid' })}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Marcar como Pago
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="gap-2 text-red-600">
-                        <Trash2 className="h-4 w-4" />
+                      <DropdownMenuItem 
+                        className="text-red-600"
+                        onClick={() => deleteTransaction(transaction.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
                         Excluir
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -203,22 +232,14 @@ export const TransactionsTable = () => {
             ))}
           </TableBody>
         </Table>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          Mostrando {transactions.length} de {transactions.length} resultado(s)
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled>
-            Anterior
-          </Button>
-          <Button variant="outline" size="sm" disabled>
-            Próximo
-          </Button>
-        </div>
-      </div>
-    </div>
+        {transactions.length === 0 && (
+          <div className="text-center text-muted-foreground py-8">
+            Nenhuma transação encontrada
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
+
+export default TransactionsTable;

@@ -2,15 +2,24 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { TransactionsTable } from "./TransactionsTable";
+import TransactionsTable from "./TransactionsTable";
 import { UpsertIncomeDrawer } from "./drawers/UpsertIncomeDrawer";
 import { UpsertExpenseDrawer } from "./drawers/UpsertExpenseDrawer";
 import { UpsertPayoutDrawer } from "./drawers/UpsertPayoutDrawer";
+import { useFinancialData } from "@/hooks/useFinancialData";
 
 const FinanceMovements = () => {
   const [incomeDrawerOpen, setIncomeDrawerOpen] = useState(false);
   const [expenseDrawerOpen, setExpenseDrawerOpen] = useState(false);
   const [payoutDrawerOpen, setPayoutDrawerOpen] = useState(false);
+  const { refreshData } = useFinancialData();
+
+  const handleDrawerClose = () => {
+    setIncomeDrawerOpen(false);
+    setExpenseDrawerOpen(false);
+    setPayoutDrawerOpen(false);
+    refreshData(); // Atualizar dados após criar nova transação
+  };
 
   return (
     <div className="space-y-6">
@@ -43,15 +52,24 @@ const FinanceMovements = () => {
       {/* Drawers */}
       <UpsertIncomeDrawer 
         open={incomeDrawerOpen} 
-        onOpenChange={setIncomeDrawerOpen}
+        onOpenChange={(open) => {
+          setIncomeDrawerOpen(open);
+          if (!open) handleDrawerClose();
+        }}
       />
       <UpsertExpenseDrawer 
         open={expenseDrawerOpen} 
-        onOpenChange={setExpenseDrawerOpen}
+        onOpenChange={(open) => {
+          setExpenseDrawerOpen(open);
+          if (!open) handleDrawerClose();
+        }}
       />
       <UpsertPayoutDrawer 
         open={payoutDrawerOpen} 
-        onOpenChange={setPayoutDrawerOpen}
+        onOpenChange={(open) => {
+          setPayoutDrawerOpen(open);
+          if (!open) handleDrawerClose();
+        }}
       />
     </div>
   );

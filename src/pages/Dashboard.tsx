@@ -9,6 +9,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { EventItem } from "@/pages/Events";
 
+interface DashboardMetrics {
+  active_bands: number;
+  upcoming_events: number;
+  total_members: number;
+  monthly_revenue: number;
+}
+
+interface UpcomingEvent {
+  id: string;
+  titulo: string;
+  inicio: string;
+  banda_nome?: string;
+}
+
 const data = [
   { name: 'Jan', receita: 2400, despesas: 1400 },
   { name: 'Fev', receita: 2210, despesas: 1100 },
@@ -27,7 +41,7 @@ const Dashboard = () => {
     total_members: 42,
     monthly_revenue: 18450
   });
-  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
 
   useSEO({
     title: "Dashboard — LA Music Hub",
@@ -55,7 +69,7 @@ const Dashboard = () => {
       }
       
       if (metrics && typeof metrics === 'object' && !Array.isArray(metrics)) {
-        const metricsObj = metrics as Record<string, any>;
+        const metricsObj = metrics as Record<string, unknown>;
         console.log('Setting metrics:', metricsObj);
         setDashboardMetrics({
           active_bands: Number(metricsObj.active_bands) || 0,
