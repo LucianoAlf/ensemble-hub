@@ -90,9 +90,14 @@ const Dashboard = () => {
       }
 
       // Load upcoming events (no limit to show all future events)
+      // First, let's check if the view exists by querying the evento table directly
+  
       const { data: events, error: eventsError } = await supabase
-        .from('vw_eventos_proximos')
-        .select('id, titulo, inicio, tipo, local, banda_nome');
+  .from('evento')
+  .select('id, titulo, inicio, tipo, local')
+  .gte('inicio', new Date().toISOString())
+  .order('inicio', { ascending: true })
+  .limit(4);
       
       if (eventsError) {
         console.error('Events error:', eventsError);
@@ -101,35 +106,20 @@ const Dashboard = () => {
       
       // Validate events data
       if (events && Array.isArray(events)) {
+        console.log('Events validated, length:', events.length);
         const validatedEvents: UpcomingEvent[] = events.map(event => ({
           id: String(event.id || ''),
           titulo: String(event.titulo || 'Evento sem título'),
           inicio: String(event.inicio || ''),
           tipo: String(event.tipo || ''),
           local: event.local ? String(event.local) : undefined,
-          banda_nome: event.banda_nome ? String(event.banda_nome) : undefined
+          banda_nome: undefined
         }));
+        console.log('Validated events:', validatedEvents);
         setUpcomingEvents(validatedEvents);
+      } else {
+        console.log('No events or not array:', events);
       }
-      console.log('Events raw data:', events);
-console.log('Events error:', eventsError);
-
-// Validate events data
-if (events && Array.isArray(events)) {
-  console.log('Events validated, length:', events.length);
-  const validatedEvents: UpcomingEvent[] = events.map(event => ({
-    id: String(event.id || ''),
-    titulo: String(event.titulo || 'Evento sem título'),
-    inicio: String(event.inicio || ''),
-    tipo: String(event.tipo || ''),
-    local: event.local ? String(event.local) : undefined,
-    banda_nome: event.banda_nome ? String(event.banda_nome) : undefined
-  }));
-  console.log('Validated events:', validatedEvents);
-  setUpcomingEvents(validatedEvents);
-} else {
-  console.log('No events or not array:', events);
-}
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao carregar dados';
