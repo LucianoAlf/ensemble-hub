@@ -130,13 +130,9 @@ export default function Events() {
           description: row.descricao ?? undefined,
           status: row.status ?? undefined,
         }));
-        
-        console.log('🔍 Mapped events:', mapped);
-        console.log('🔍 Total events found:', mapped.length);
 
         if (mounted) {
           setEvents(mapped);
-          console.log('🔍 Events set in state');
         }
       } catch (err: unknown) {
         if (mounted && err.name !== "AbortError") {

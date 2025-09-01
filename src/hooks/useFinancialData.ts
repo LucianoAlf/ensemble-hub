@@ -101,7 +101,7 @@ export const useFinancialData = () => {
 
   // Carregar dados financeiros
   const loadFinancialData = useCallback(async () => {
-    try {
+     try {
       setLoading(true);
       setError(null);
 
