@@ -26,7 +26,7 @@ interface RealTimeSyncProviderProps {
 }
 
 export const RealTimeSyncProvider: React.FC<RealTimeSyncProviderProps> = ({ children }) => {
-  const { supabase } = useSupabaseOptimized();
+  const { client: supabase } = useSupabaseOptimized();
   const { user } = useAuth();
   const { toast } = useToast();
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({

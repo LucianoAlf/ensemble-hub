@@ -36,7 +36,7 @@ interface TechnicalRiderFormProps {
 }
 
 export function TechnicalRiderForm({ data, onChange }: TechnicalRiderFormProps) {
-  const updateField = (field: keyof TechnicalRiderData, value: string | number) => {
+  const updateField = (field: keyof TechnicalRiderData, value: string | number | boolean) => {
     onChange({ ...data, [field]: value });
   };
 
@@ -206,7 +206,7 @@ export function TechnicalRiderForm({ data, onChange }: TechnicalRiderFormProps) 
               <Checkbox
                 id="extensoes_necessarias"
                 checked={data.extensoes_necessarias}
-                onCheckedChange={(checked) => updateField("extensoes_necessarias", checked)}
+                onCheckedChange={(checked) => updateField("extensoes_necessarias", !!checked)}
               />
               <Label htmlFor="extensoes_necessarias" className="text-sm">
                 Extensões necessárias
@@ -268,7 +268,7 @@ export function TechnicalRiderForm({ data, onChange }: TechnicalRiderFormProps) 
               <Checkbox
                 id="cobertura_necessaria"
                 checked={data.cobertura_necessaria}
-                onCheckedChange={(checked) => updateField("cobertura_necessaria", checked)}
+                onCheckedChange={(checked) => updateField("cobertura_necessaria", !!checked)}
               />
               <Label htmlFor="cobertura_necessaria" className="text-sm">
                 Cobertura
@@ -279,7 +279,7 @@ export function TechnicalRiderForm({ data, onChange }: TechnicalRiderFormProps) 
               <Checkbox
                 id="iluminacao_basica"
                 checked={data.iluminacao_basica}
-                onCheckedChange={(checked) => updateField("iluminacao_basica", checked)}
+                onCheckedChange={(checked) => updateField("iluminacao_basica", !!checked)}
               />
               <Label htmlFor="iluminacao_basica" className="text-sm">
                 Iluminação Básica
@@ -290,7 +290,7 @@ export function TechnicalRiderForm({ data, onChange }: TechnicalRiderFormProps) 
               <Checkbox
                 id="camarim_necessario"
                 checked={data.camarim_necessario}
-                onCheckedChange={(checked) => updateField("camarim_necessario", checked)}
+                onCheckedChange={(checked) => updateField("camarim_necessario", !!checked)}
               />
               <Label htmlFor="camarim_necessario" className="text-sm">
                 Camarim
@@ -301,7 +301,7 @@ export function TechnicalRiderForm({ data, onChange }: TechnicalRiderFormProps) 
               <Checkbox
                 id="estacionamento_necessario"
                 checked={data.estacionamento_necessario}
-                onCheckedChange={(checked) => updateField("estacionamento_necessario", checked)}
+                onCheckedChange={(checked) => updateField("estacionamento_necessario", !!checked)}
               />
               <Label htmlFor="estacionamento_necessario" className="text-sm">
                 Estacionamento
@@ -312,7 +312,7 @@ export function TechnicalRiderForm({ data, onChange }: TechnicalRiderFormProps) 
               <Checkbox
                 id="seguranca_necessaria"
                 checked={data.seguranca_necessaria}
-                onCheckedChange={(checked) => updateField("seguranca_necessaria", checked)}
+                onCheckedChange={(checked) => updateField("seguranca_necessaria", !!checked)}
               />
               <Label htmlFor="seguranca_necessaria" className="text-sm">
                 Segurança

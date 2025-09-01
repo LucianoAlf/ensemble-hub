@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Check, X, Loader2 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { useFinancialEditing } from '@/hooks/useFinancialEditing';
+import { useFinancialEditing, EditableField as EditableFieldType } from '@/hooks/useFinancialEditing';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -14,14 +14,14 @@ import { ptBR } from 'date-fns/locale';
 
 export interface EditableFieldProps {
   id: string;
-  field: string;
-  value: string | number | Date;
+  field: EditableFieldType;
+  value: string | number | Date | null;
   type: 'currency' | 'text' | 'date' | 'select' | 'number';
   table: 'transactions' | 'payouts';
   className?: string;
   placeholder?: string;
   options?: { value: string; label: string }[];
-  onChange?: (value: string | number | Date) => void;
+  onChange?: (value: string | number | Date | null) => void;
   disabled?: boolean;
 }
 
@@ -43,7 +43,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const optimisticValue = getOptimisticValue(id, field as EditableField, table, value);
+  const optimisticValue = getOptimisticValue(id, field, table, value);
   const displayValue = isEditing ? tempValue : optimisticValue;
 
   useEffect(() => {
@@ -53,16 +53,16 @@ export const EditableField: React.FC<EditableFieldProps> = ({
     }
   }, [isEditing]);
 
-  const formatDisplayValue = (val: string | number | Date | null | undefined) => {
+  const formatDisplayValue = (val: string | number | Date | null | undefined): string => {
     if (val === null || val === undefined) return placeholder || '-';
     
     switch (type) {
       case 'currency':
-        return formatCurrency(val);
+        return formatCurrency(typeof val === 'number' ? val : parseFloat(val.toString()) || 0);
       case 'date':
-        return formatDate(val);
+        return formatDate(val instanceof Date ? val : new Date(val.toString()));
       case 'select':
-        return options?.find(opt => opt.value === val)?.label || val;
+        return options?.find(opt => opt.value === val)?.label || val.toString();
       default:
         return val.toString();
     }
@@ -81,7 +81,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
       return;
     }
 
-    const success = await updateField(id, field as EditableField, tempValue, table, value);
+    const success = await updateField(id, field, tempValue, table, value);
     if (success) {
       setIsEditing(false);
       onChange?.(tempValue);
@@ -111,8 +111,15 @@ export const EditableField: React.FC<EditableFieldProps> = ({
             ref={inputRef}
             type="number"
             step={type === 'currency' ? '0.01' : '1'}
-            value={tempValue}
-            onChange={(e) => setTempValue(type === 'currency' ? parseFloat(e.target.value) : parseInt(e.target.value))}
+            value={tempValue?.toString() ?? ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '') {
+                setTempValue(null);
+              } else {
+                setTempValue(type === 'currency' ? parseFloat(val) || 0 : parseInt(val) || 0);
+              }
+            }}
             onKeyDown={handleKeyDown}
             className="h-8 text-sm"
             placeholder={placeholder}
@@ -175,8 +182,8 @@ export const EditableField: React.FC<EditableFieldProps> = ({
           <Input
             ref={inputRef}
             type="text"
-            value={tempValue}
-            onChange={(e) => setTempValue(e.target.value)}
+            value={tempValue?.toString() ?? ''}
+            onChange={(e) => setTempValue(e.target.value || null)}
             onKeyDown={handleKeyDown}
             className="h-8 text-sm"
             placeholder={placeholder}

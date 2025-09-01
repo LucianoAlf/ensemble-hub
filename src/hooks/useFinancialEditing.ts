@@ -10,8 +10,8 @@ export type EditableField = 'gross_amount' | 'fee_amount' | 'description' | 'cat
 export interface EditOperation {
   id: string;
   field: EditableField;
-  value: string | number | Date;
-  previousValue: string | number | Date;
+  value: string | number | Date | null;
+  previousValue: string | number | Date | null;
   table: 'transactions' | 'payouts';
 }
 
@@ -36,9 +36,12 @@ export const useFinancialEditing = () => {
   });
 
   const [pendingEdits, setPendingEdits] = useState<EditOperation[]>([]);
-  const [optimisticData, setOptimisticData] = useState<Record<string, string | number | Date>>({});
+  const [optimisticData, setOptimisticData] = useState<Record<string, string | number | Date | null>>({});
 
-  const validateField = useCallback((field: EditableField, value: string | number | Date): string | null => {
+  const validateField = useCallback((field: EditableField, value: string | number | Date | null): string | null => {
+    if (value === null || value === undefined) {
+      return 'Este campo é obrigatório';
+    }
     switch (field) {
       case 'gross_amount':
       case 'fee_amount':
@@ -50,7 +53,10 @@ export const useFinancialEditing = () => {
       case 'description':
       case 'category':
       case 'counterparty':
-        if (typeof value !== 'string' || value.trim().length === 0) {
+        if (typeof value !== 'string') {
+          return 'Este campo deve ser um texto';
+        }
+        if (value.trim().length === 0) {
           return 'Este campo não pode estar vazio';
         }
         if (value.length > 500) {
@@ -80,10 +86,10 @@ export const useFinancialEditing = () => {
   const updateField = useCallback(async (
     id: string,
     field: EditableField,
-    value: string | number | Date,
+    value: string | number | Date | null,
     table: 'transactions' | 'payouts',
-    previousValue: string | number | Date
-  ) => {
+    previousValue: string | number | Date | null
+  ): Promise<boolean> => {
     const validationError = validateField(field, value);
     if (validationError) {
       toast({
@@ -118,12 +124,16 @@ export const useFinancialEditing = () => {
     try {
       setEditingState(prev => ({ ...prev, isSaving: true }));
 
+      const updateData = { [field]: value };
       const { error } = await supabase
         .from(table)
-        .update({ [field]: value })
+        .update(updateData)
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase update error:', error);
+        throw new Error(`Erro ao atualizar ${field}: ${error.message}`);
+      }
 
       setEditingState(prev => ({
         ...prev,
@@ -146,10 +156,12 @@ export const useFinancialEditing = () => {
     } catch (error) {
       console.error('Error updating financial data:', error);
       
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao salvar alteração';
+      
       setEditingState(prev => ({
         ...prev,
         isSaving: false,
-        error: error instanceof Error ? error.message : 'Erro ao salvar alteração',
+        error: errorMessage,
       }));
 
       // Revert optimistic update
@@ -160,7 +172,7 @@ export const useFinancialEditing = () => {
 
       toast({
         title: "Erro ao salvar",
-        description: error instanceof Error ? error.message : "Não foi possível salvar a alteração",
+        description: errorMessage,
         variant: "destructive",
       });
 
@@ -189,7 +201,26 @@ export const useFinancialEditing = () => {
         }));
 
         return supabase.from(table as 'transactions' | 'payouts')
-          .upsert(updates, { onConflict: 'id' });
+          .upsert(updates.map(update => ({
+            ...update,
+            // Required fields for transactions
+            ...(table === 'transactions' && {
+              category: '',
+              gross_amount: 0,
+              tenant_id: '',
+              transaction_date: new Date().toISOString(),
+              type: 'expense'
+            }),
+            // Required fields for payouts
+            ...(table === 'payouts' && {
+              amount: 0,
+              beneficiary_name: '',
+              beneficiary_type: '',
+              due_date: new Date().toISOString(),
+              evento_id: '',
+              tenant_id: ''
+            })
+          })), { onConflict: 'id' });
       });
 
       const results = await Promise.all(promises);
@@ -257,8 +288,8 @@ export const useFinancialEditing = () => {
     id: string,
     field: EditableField,
     table: 'transactions' | 'payouts',
-    defaultValue: string | number | Date
-  ) => {
+    defaultValue: string | number | Date | null
+  ): string | number | Date | null => {
     const key = `${table}_${id}_${field}`;
     return optimisticData[key] ?? defaultValue;
   }, [optimisticData]);

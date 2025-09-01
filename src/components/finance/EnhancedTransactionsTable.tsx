@@ -31,7 +31,7 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
   filters = {},
   onTransactionUpdate,
 }) => {
-  const { supabase } = useSupabaseOptimized();
+  const { client: supabase } = useSupabaseOptimized();
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,13 +32,66 @@ interface Band {
   [key: string]: unknown;
 }
 
+interface ValidationError {
+  field: string;
+  message: string;
+}
+
+interface CreateBandResult {
+  success: boolean;
+  band?: Band;
+  error?: string;
+}
+
 type TabType = "info" | "members" | "repertoire" | "rider" | "stagemap";
 
 export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBandDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [currentTab, setCurrentTab] = useState<TabType>("info");
   const [unidades, setUnidades] = useState<Unidade[]>([]);
-  const { supabase: client } = useSupabaseOptimized();
+  const { client } = useSupabaseOptimized();
+
+  // Validation functions
+  const validateBandInfo = useCallback((data: BandInfoData): ValidationError[] => {
+    const errors: ValidationError[] = [];
+    
+    if (!data.nome?.trim()) {
+      errors.push({ field: 'nome', message: 'Nome da banda é obrigatório' });
+    }
+    
+    if (!data.unidade_id) {
+      errors.push({ field: 'unidade_id', message: 'Unidade é obrigatória' });
+    }
+    
+    if (data.nome && data.nome.length > 100) {
+      errors.push({ field: 'nome', message: 'Nome da banda deve ter no máximo 100 caracteres' });
+    }
+    
+    return errors;
+  }, []);
+
+  const validateMembers = useCallback((members: BandMemberData[]): ValidationError[] => {
+    const errors: ValidationError[] = [];
+    
+    if (members.length === 0) {
+      errors.push({ field: 'members', message: 'Pelo menos um integrante é obrigatório' });
+      return errors;
+    }
+    
+    members.forEach((member, index) => {
+      if (!member.nome?.trim()) {
+        errors.push({ field: `member_${index}_nome`, message: `Nome do integrante ${index + 1} é obrigatório` });
+      }
+      if (!member.instrumento?.trim()) {
+        errors.push({ field: `member_${index}_instrumento`, message: `Instrumento do integrante ${index + 1} é obrigatório` });
+      }
+      if (!member.data_entrada) {
+        errors.push({ field: `member_${index}_data_entrada`, message: `Data de entrada do integrante ${index + 1} é obrigatória` });
+      }
+    });
+    
+    return errors;
+  }, []);
 
   // Form data states
   const [bandInfo, setBandInfo] = useState<BandInfoData>({
@@ -69,6 +122,15 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
     data_entrada: new Date().toISOString().split('T')[0],
     observacoes: ""
   }]);
+
+  const validateAllData = useCallback((): ValidationError[] => {
+    const errors: ValidationError[] = [];
+    
+    errors.push(...validateBandInfo(bandInfo));
+    errors.push(...validateMembers(members));
+    
+    return errors;
+  }, [bandInfo, members, validateBandInfo, validateMembers]);
 
   const [repertoire, setRepertoire] = useState<RepertoireSongData[]>([]);
 
@@ -112,22 +174,30 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
     observacoes: ""
   });
 
-  const loadUnidades = async () => {
-    if (!client) return;
-    
+  const loadUnidades = useCallback(async (): Promise<void> => {
+    if (!client) {
+      console.error('Supabase client não está disponível');
+      toast.error("Erro de conexão com o banco de dados");
+      return;
+    }
+
     try {
       const { data, error } = await client
         .from('unidade')
         .select('id, nome')
         .order('nome');
       
-      if (error) throw error;
+      if (error) {
+        throw new Error(`Erro ao carregar unidades: ${error.message}`);
+      }
+      
       setUnidades(data || []);
     } catch (error) {
       console.error('Erro ao carregar unidades:', error);
-      toast.error("Erro ao carregar unidades");
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao carregar unidades';
+      toast.error(errorMessage);
     }
-  };
+  }, [client]);
 
   // Load unidades on dialog open
   useEffect(() => {
@@ -136,36 +206,27 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
     }
   }, [open, client, loadUnidades]);
 
-  const validateCurrentTab = (showToast: boolean = true): boolean => {
+  const validateCurrentTab = useCallback((showToast: boolean = true): boolean => {
+    let errors: ValidationError[] = [];
+    
     switch (currentTab) {
       case "info":
-        if (!bandInfo.nome.trim()) {
-          if (showToast) toast.error("Nome da banda é obrigatório");
-          return false;
-        }
-        if (!bandInfo.unidade_id) {
-          if (showToast) toast.error("Selecione uma unidade");
-          return false;
-        }
-        return true;
-      
+        errors = validateBandInfo(bandInfo);
+        break;
       case "members":
-        if (members.length === 0) {
-          if (showToast) toast.error("Adicione pelo menos um integrante");
-          return false;
-        }
-        for (const member of members) {
-          if (!member.nome.trim() || !member.instrumento.trim() || !member.data_entrada) {
-            if (showToast) toast.error("Preencha os campos obrigatórios dos integrantes (nome, instrumento, data de entrada)");
-            return false;
-          }
-        }
-        return true;
-      
+        errors = validateMembers(members);
+        break;
       default:
         return true;
     }
-  };
+    
+    if (errors.length > 0 && showToast) {
+      toast.error(errors[0].message);
+      return false;
+    }
+    
+    return errors.length === 0;
+  }, [currentTab, bandInfo, members, validateBandInfo, validateMembers]);
 
   const handleNext = () => {
     if (!validateCurrentTab()) return;
@@ -185,8 +246,13 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
     }
   };
 
-  const handleSubmit = async () => {
-    if (!validateCurrentTab()) return;
+  const handleSubmit = async (): Promise<void> => {
+    // Validate all data before submission
+    const allErrors = validateAllData();
+    if (allErrors.length > 0) {
+      toast.error(allErrors[0].message);
+      return;
+    }
 
     if (!client) {
       console.error('Supabase client não está disponível');
@@ -385,7 +451,18 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
 
       console.log('Banda criada com sucesso completo');
       toast.success("Banda criada com sucesso!");
-      onBandCreated({ ...bandData, members_count: 1 });
+      
+      // Create the band object to return
+      const createdBand: Band = {
+        id: bandId,
+        nome: bandInfo.nome,
+        genero: bandInfo.genero || '',
+        descricao: bandInfo.descricao || '',
+        unidade_id: bandInfo.unidade_id,
+        logo_url: undefined
+      };
+      
+      onBandCreated(createdBand);
       onOpenChange(false);
       
       // Reset all forms
@@ -404,7 +481,7 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
         }
       }
       
-      toast.error(errorMessage);
+      toast.error(`Erro ao criar banda: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -619,7 +696,7 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
             ) : (
               <Button 
                 type="button" 
-                onClick={handleSubmit} 
+                onClick={handleSubmit}
                 disabled={isLoading || !validateCurrentTab(false)}
               >
                 {isLoading ? "Salvando..." : "Criar Banda"}

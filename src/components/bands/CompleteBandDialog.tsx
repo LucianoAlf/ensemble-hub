@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Edit, Eye, Loader2, Save, X } from "lucide-react";
 
 // Import form components
-import { BandInfoForm, BandInfoData } from "./forms/BandInfoForm";
-import { BandMembersForm, BandMemberData } from "./forms/BandMembersForm";
-import { RepertoireForm, RepertoireSongData } from "./forms/RepertoireForm";
-import { TechnicalRiderForm, TechnicalRiderData } from "./forms/TechnicalRiderForm";
-import { StageMapForm, StageMapData } from "./forms/StageMapForm";
+import { BandInfoForm, type BandInfoData } from "./forms/BandInfoForm";
+import { BandMembersForm, type BandMemberData } from "./forms/BandMembersForm";
+import { RepertoireForm, type RepertoireSongData } from "./forms/RepertoireForm";
+import { TechnicalRiderForm, type TechnicalRiderData } from "./forms/TechnicalRiderForm";
+import { StageMapForm, type StageMapData } from "./forms/StageMapForm";
 
 interface CompleteBandDialogProps {
   open: boolean;
@@ -35,7 +35,24 @@ interface Band {
   descricao: string;
   logo_url?: string;
   unidade_id?: string;
+  ativa?: boolean;
   [key: string]: unknown;
+}
+
+interface ValidationError {
+  field: string;
+  message: string;
+}
+
+interface DatabaseError {
+  message: string;
+  code?: string;
+  details?: string;
+}
+
+interface LoadDataResult {
+  success: boolean;
+  error?: string;
 }
 
 export function CompleteBandDialog({ 
@@ -111,35 +128,95 @@ export function CompleteBandDialog({
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [bandData, setBandData] = useState<Band | null>(null);
   
-  const { supabase } = useSupabaseOptimized();
+  const { client } = useSupabaseOptimized();
   const { toast } = useToast();
+
+  // Validation functions
+  const validateBandInfo = useCallback((data: BandInfoData): ValidationError[] => {
+    const errors: ValidationError[] = [];
+    
+    if (!data.nome?.trim()) {
+      errors.push({ field: 'nome', message: 'Nome da banda é obrigatório' });
+    }
+    
+    if (!data.unidade_id) {
+      errors.push({ field: 'unidade_id', message: 'Unidade é obrigatória' });
+    }
+    
+    if (data.nome && data.nome.length > 100) {
+      errors.push({ field: 'nome', message: 'Nome da banda deve ter no máximo 100 caracteres' });
+    }
+    
+    return errors;
+  }, []);
+
+  const validateMembers = useCallback((members: BandMemberData[]): ValidationError[] => {
+    const errors: ValidationError[] = [];
+    
+    if (members.length === 0) {
+      errors.push({ field: 'members', message: 'Pelo menos um integrante é obrigatório' });
+      return errors;
+    }
+    
+    members.forEach((member, index) => {
+      if (!member.nome?.trim()) {
+        errors.push({ field: `member_${index}_nome`, message: `Nome do integrante ${index + 1} é obrigatório` });
+      }
+      if (!member.instrumento?.trim()) {
+        errors.push({ field: `member_${index}_instrumento`, message: `Instrumento do integrante ${index + 1} é obrigatório` });
+      }
+      if (!member.data_entrada) {
+        errors.push({ field: `member_${index}_data_entrada`, message: `Data de entrada do integrante ${index + 1} é obrigatória` });
+      }
+    });
+    
+    return errors;
+  }, []);
+
+  const validateAllData = useCallback((): ValidationError[] => {
+    const errors: ValidationError[] = [];
+    
+    errors.push(...validateBandInfo(bandInfo));
+    errors.push(...validateMembers(members));
+    
+    return errors;
+  }, [bandInfo, members, validateBandInfo, validateMembers]);
 
   useEffect(() => {
     if (open && bandId) {
       loadBandData();
       loadUnidades();
     }
-  }, [open, bandId]);
+  }, [open, bandId, client, toast]);
 
   useEffect(() => {
     setCurrentMode(mode);
   }, [mode]);
 
-  const loadUnidades = async () => {
+  const loadUnidades = useCallback(async (): Promise<void> => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('unidade')
         .select('id, nome')
         .order('nome');
       
-      if (error) throw error;
+      if (error) {
+        throw new Error(`Erro ao carregar unidades: ${error.message}`);
+      }
+      
       setUnidades(data || []);
     } catch (error) {
       console.error('Erro ao carregar unidades:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao carregar unidades';
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
     }
-  };
+  }, [client, toast]);
 
-  const loadBandData = async () => {
+  const loadBandData = useCallback(async () => {
     if (!bandId) return;
     
     setLoading(true);
@@ -152,11 +229,11 @@ export function CompleteBandDialog({
         riderResponse,
         stageMapResponse
       ] = await Promise.all([
-        supabase.from('banda').select('*').eq('id', bandId).single(),
-        supabase.from('banda_integrante').select('*').eq('banda_id', bandId).eq('ativo', true),
-        supabase.from('banda_repertorio').select('*').eq('banda_id', bandId).eq('ativo', true),
-        supabase.from('banda_rider_tecnico').select('*').eq('banda_id', bandId).maybeSingle(),
-        supabase.from('banda_mapa_palco').select('*').eq('banda_id', bandId).maybeSingle()
+        client.from('banda').select('*').eq('id', bandId).single(),
+        client.from('banda_integrante').select('*').eq('banda_id', bandId).eq('ativo', true),
+        client.from('banda_repertorio').select('*').eq('banda_id', bandId).eq('ativo', true),
+        client.from('banda_rider_tecnico').select('*').eq('banda_id', bandId).maybeSingle(),
+        client.from('banda_mapa_palco').select('*').eq('banda_id', bandId).maybeSingle()
       ]);
 
       if (bandResponse.error) throw bandResponse.error;
@@ -264,33 +341,53 @@ export function CompleteBandDialog({
 
     } catch (error) {
       console.error('Erro ao carregar dados da banda:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao carregar dados da banda';
       toast({
         title: "Erro",
-        description: "Não foi possível carregar os dados da banda.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [bandId, client, toast]);
 
-  const handleSave = async () => {
-    if (!bandId) return;
-
+  const handleSave = async (): Promise<void> => {
+    if (!bandId) {
+      toast({
+        title: "Erro",
+        description: "ID da banda não encontrado",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate all data before saving
+    const validationErrors = validateAllData();
+    if (validationErrors.length > 0) {
+      const errorMessage = validationErrors.map(error => error.message).join(', ');
+      toast({
+        title: "Erro de Validação",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setSaving(true);
     try {
       // Get user's tenant_id
-      const { data: profileData } = await supabase
+      const { data: profileData } = await client
         .from('profiles')
         .select('tenant_id')
-        .eq('id', (await supabase.auth.getUser()).data.user?.id)
+        .eq('id', (await client.auth.getUser()).data.user?.id)
         .single();
 
       const tenantId = profileData?.tenant_id;
       if (!tenantId) throw new Error('Tenant ID não encontrado');
 
       // Update band basic info
-      const { error: bandError } = await supabase
+      const { error: bandError } = await client
         .from('banda')
         .update({
           nome: bandInfo.nome,
@@ -311,10 +408,10 @@ export function CompleteBandDialog({
       if (bandError) throw bandError;
 
       // Delete existing members and add new ones
-      await supabase.from('banda_integrante').delete().eq('banda_id', bandId);
+      await client.from('banda_integrante').delete().eq('banda_id', bandId);
       
       if (members.length > 0) {
-        const { error: membersError } = await supabase
+        const { error: membersError } = await client
           .from('banda_integrante')
           .insert(
             members.map(member => ({
@@ -338,10 +435,10 @@ export function CompleteBandDialog({
       }
 
       // Delete existing repertoire and add new ones
-      await supabase.from('banda_repertorio').delete().eq('banda_id', bandId);
+      await client.from('banda_repertorio').delete().eq('banda_id', bandId);
       
       if (repertoire.length > 0) {
-        const { error: repertoireError } = await supabase
+        const { error: repertoireError } = await client
           .from('banda_repertorio')
           .insert(
             repertoire.map(song => ({
@@ -365,7 +462,7 @@ export function CompleteBandDialog({
       }
 
       // Update or insert technical rider
-      const { error: riderUpsertError } = await supabase
+      const { error: riderUpsertError } = await client
         .from('banda_rider_tecnico')
         .upsert({
           banda_id: bandId,
@@ -397,7 +494,7 @@ export function CompleteBandDialog({
       if (riderUpsertError) throw riderUpsertError;
 
       // Update or insert stage map
-      const { error: stageMapUpsertError } = await supabase
+      const { error: stageMapUpsertError } = await client
         .from('banda_mapa_palco')
         .upsert({
           banda_id: bandId,
@@ -429,7 +526,7 @@ export function CompleteBandDialog({
 
       setCurrentMode("view");
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro ao salvar banda';
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao salvar banda';
       console.error('Erro ao salvar banda:', error);
       toast({
         title: "Erro",
