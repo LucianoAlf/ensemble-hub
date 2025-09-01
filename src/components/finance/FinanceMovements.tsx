@@ -2,76 +2,74 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import TransactionsTable from "./TransactionsTable";
+import { EnhancedTransactionsTable } from "./EnhancedTransactionsTable";
 import { UpsertIncomeDrawer } from "./drawers/UpsertIncomeDrawer";
 import { UpsertExpenseDrawer } from "./drawers/UpsertExpenseDrawer";
 import { UpsertPayoutDrawer } from "./drawers/UpsertPayoutDrawer";
-import { useFinancialData } from "@/hooks/useFinancialData";
+import { RealTimeSyncProvider, SyncStatusIndicator } from "./RealTimeSyncProvider";
+import { useFinancialEditing } from "@/hooks/useFinancialEditing";
+import { AutoSaveIndicator } from "./RealTimeSyncProvider";
 
 const FinanceMovements = () => {
   const [incomeDrawerOpen, setIncomeDrawerOpen] = useState(false);
   const [expenseDrawerOpen, setExpenseDrawerOpen] = useState(false);
   const [payoutDrawerOpen, setPayoutDrawerOpen] = useState(false);
-  const { refreshData } = useFinancialData();
-
-  const handleDrawerClose = () => {
-    setIncomeDrawerOpen(false);
-    setExpenseDrawerOpen(false);
-    setPayoutDrawerOpen(false);
-    refreshData(); // Atualizar dados após criar nova transação
-  };
+  const [filters, setFilters] = useState({});
+  const { editingState } = useFinancialEditing();
 
   return (
-    <div className="space-y-6">
-      {/* Ações Rápidas */}
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={() => setIncomeDrawerOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Nova Receita
-        </Button>
-        <Button onClick={() => setExpenseDrawerOpen(true)} variant="outline" className="gap-2">
-          <Plus className="h-4 w-4" />
-          Nova Despesa
-        </Button>
-        <Button onClick={() => setPayoutDrawerOpen(true)} variant="outline" className="gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Cachê
-        </Button>
+    <RealTimeSyncProvider>
+      <div className="space-y-6">
+        {/* Status Bar */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <SyncStatusIndicator />
+            <AutoSaveIndicator 
+              isSaving={editingState.isSaving} 
+              lastSaved={editingState.lastSaved} 
+            />
+          </div>
+        </div>
+
+        {/* Ações Rápidas */}
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setIncomeDrawerOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Nova Receita
+          </Button>
+          <Button onClick={() => setExpenseDrawerOpen(true)} variant="outline" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Nova Despesa
+          </Button>
+          <Button onClick={() => setPayoutDrawerOpen(true)} variant="outline" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Cachê
+          </Button>
+        </div>
+
+        {/* Tabela de Movimentações */}
+        <EnhancedTransactionsTable 
+          filters={filters}
+          onTransactionUpdate={(transaction) => {
+            console.log('Transaction updated:', transaction);
+          }}
+        />
+
+        {/* Drawers */}
+        <UpsertIncomeDrawer 
+          open={incomeDrawerOpen} 
+          onOpenChange={setIncomeDrawerOpen}
+        />
+        <UpsertExpenseDrawer 
+          open={expenseDrawerOpen} 
+          onOpenChange={setExpenseDrawerOpen}
+        />
+        <UpsertPayoutDrawer 
+          open={payoutDrawerOpen} 
+          onOpenChange={setPayoutDrawerOpen}
+        />
       </div>
-
-      {/* Tabela de Movimentações */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Todas as Movimentações</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TransactionsTable />
-        </CardContent>
-      </Card>
-
-      {/* Drawers */}
-      <UpsertIncomeDrawer 
-        open={incomeDrawerOpen} 
-        onOpenChange={(open) => {
-          setIncomeDrawerOpen(open);
-          if (!open) handleDrawerClose();
-        }}
-      />
-      <UpsertExpenseDrawer 
-        open={expenseDrawerOpen} 
-        onOpenChange={(open) => {
-          setExpenseDrawerOpen(open);
-          if (!open) handleDrawerClose();
-        }}
-      />
-      <UpsertPayoutDrawer 
-        open={payoutDrawerOpen} 
-        onOpenChange={(open) => {
-          setPayoutDrawerOpen(open);
-          if (!open) handleDrawerClose();
-        }}
-      />
-    </div>
+    </RealTimeSyncProvider>
   );
 };
 

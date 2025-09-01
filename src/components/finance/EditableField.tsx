@@ -1,84 +1,97 @@
-import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Check, X, Edit2, Loader2, CheckCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import React, { useState, useRef, useEffect } from 'react';
+import { cn } from '@/lib/utils';
+import { Check, X, Loader2 } from 'lucide-react';
+import { formatCurrency, formatDate } from '@/lib/formatters';
+import { useFinancialEditing } from '@/hooks/useFinancialEditing';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-interface EditableFieldProps {
-  value: string | number;
-  onSave: (value: string | number) => Promise<void>;
-  type?: 'text' | 'number' | 'currency';
-  placeholder?: string;
+export interface EditableFieldProps {
+  id: string;
+  field: string;
+  value: string | number | Date;
+  type: 'currency' | 'text' | 'date' | 'select' | 'number';
+  table: 'transactions' | 'payouts';
   className?: string;
+  placeholder?: string;
+  options?: { value: string; label: string }[];
+  onChange?: (value: string | number | Date) => void;
   disabled?: boolean;
-  formatDisplay?: (value: string | number) => string;
-  label?: string;
 }
 
-export const EditableField = ({
+export const EditableField: React.FC<EditableFieldProps> = ({
+  id,
+  field,
   value,
-  onSave,
-  type = 'text',
-  placeholder,
+  type,
+  table,
   className,
+  placeholder,
+  options,
+  onChange,
   disabled = false,
-  formatDisplay,
-  label
-}: EditableFieldProps) => {
+}) => {
+  const { updateField, getOptimisticValue, editingState } = useFinancialEditing();
   const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value.toString());
-  const [isLoading, setIsLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const { toast } = useToast();
+  const [tempValue, setTempValue] = useState(value);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const optimisticValue = getOptimisticValue(id, field as EditableField, table, value);
+  const displayValue = isEditing ? tempValue : optimisticValue;
 
   useEffect(() => {
-    setEditValue(value.toString());
-  }, [value]);
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const formatDisplayValue = (val: string | number | Date | null | undefined) => {
+    if (val === null || val === undefined) return placeholder || '-';
+    
+    switch (type) {
+      case 'currency':
+        return formatCurrency(val);
+      case 'date':
+        return formatDate(val);
+      case 'select':
+        return options?.find(opt => opt.value === val)?.label || val;
+      default:
+        return val.toString();
+    }
+  };
+
+  const handleEdit = () => {
+    if (disabled) return;
+    setIsEditing(true);
+    setTempValue(value);
+    setError(null);
+  };
 
   const handleSave = async () => {
-    if (editValue === value.toString()) {
+    if (tempValue === value) {
       setIsEditing(false);
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const processedValue = type === 'number' || type === 'currency' 
-        ? parseFloat(editValue) || 0
-        : editValue;
-      
-      await onSave(processedValue);
-      
-      // Mostrar confirmação visual de sucesso
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 2000);
-      
+    const success = await updateField(id, field as EditableField, tempValue, table, value);
+    if (success) {
       setIsEditing(false);
-      
-      toast({
-        title: "Sucesso!",
-        description: `${label || 'Campo'} atualizado com sucesso.`,
-        variant: "default",
-        duration: 3000
-      });
-    } catch (error) {
-      console.error('Erro ao salvar:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao atualizar o valor. Tente novamente.",
-        variant: "destructive",
-        duration: 5000
-      });
-      setEditValue(value.toString()); // Reverte para o valor original
-    } finally {
-      setIsLoading(false);
+      onChange?.(tempValue);
     }
   };
 
   const handleCancel = () => {
-    setEditValue(value.toString());
+    setTempValue(value);
     setIsEditing(false);
+    setError(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -89,90 +102,136 @@ export const EditableField = ({
     }
   };
 
-  const formatCurrency = (val: string | number) => {
-    const numValue = typeof val === 'string' ? parseFloat(val) || 0 : val;
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(numValue);
-  };
+  const renderInput = () => {
+    switch (type) {
+      case 'currency':
+      case 'number':
+        return (
+          <Input
+            ref={inputRef}
+            type="number"
+            step={type === 'currency' ? '0.01' : '1'}
+            value={tempValue}
+            onChange={(e) => setTempValue(type === 'currency' ? parseFloat(e.target.value) : parseInt(e.target.value))}
+            onKeyDown={handleKeyDown}
+            className="h-8 text-sm"
+            placeholder={placeholder}
+          />
+        );
 
-  const getDisplayValue = () => {
-    if (formatDisplay) {
-      return formatDisplay(value);
-    }
-    
-    if (type === 'currency') {
-      return formatCurrency(value);
-    }
-    
-    return value.toString();
-  };
+      case 'date':
+        return (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full h-8 justify-start text-left font-normal text-sm",
+                  !tempValue && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {tempValue ? format(new Date(tempValue), "PPP", { locale: ptBR }) : <span>Selecione uma data</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={tempValue ? new Date(tempValue) : undefined}
+                onSelect={(date) => {
+                  setTempValue(date);
+                  handleSave();
+                }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        );
 
-  if (disabled) {
-    return (
-      <span className={cn("text-muted-foreground", className)}>
-        {getDisplayValue()}
-      </span>
-    );
-  }
+      case 'select':
+        return (
+          <Select
+            value={tempValue?.toString()}
+            onValueChange={(val) => {
+              setTempValue(val);
+              handleSave();
+            }}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent>
+              {options?.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+
+      default:
+        return (
+          <Input
+            ref={inputRef}
+            type="text"
+            value={tempValue}
+            onChange={(e) => setTempValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="h-8 text-sm"
+            placeholder={placeholder}
+          />
+        );
+    }
+  };
 
   if (isEditing) {
     return (
-      <div className="flex items-center gap-2">
-        <Input
-          type={type === 'currency' ? 'number' : type}
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          className={cn("h-8 text-sm", className)}
-          autoFocus
-          step={type === 'currency' ? '0.01' : undefined}
-        />
-        <div className="flex items-center gap-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 w-8 p-0"
-            onClick={handleSave}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="h-4 w-4 text-green-600" />
-            )}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 w-8 p-0"
-            onClick={handleCancel}
-            disabled={isLoading}
-          >
-            <X className="h-4 w-4 text-red-600" />
-          </Button>
-        </div>
+      <div className={cn("flex items-center gap-1", className)}>
+        {renderInput()}
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={handleSave}
+          className="h-6 w-6 p-0"
+          disabled={editingState.isSaving}
+        >
+          {editingState.isSaving ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Check className="h-3 w-3" />
+          )}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={handleCancel}
+          className="h-6 w-6 p-0"
+          disabled={editingState.isSaving}
+        >
+          <X className="h-3 w-3" />
+        </Button>
       </div>
     );
   }
 
   return (
-    <div 
+    <div
       className={cn(
-        "group flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1 transition-colors",
-        showSuccess && "bg-green-50 border border-green-200",
-        className
+        "flex items-center gap-2 px-2 py-1 rounded hover:bg-accent/50 cursor-pointer transition-colors",
+        className,
+        disabled && "cursor-not-allowed opacity-60"
       )}
-      onClick={() => setIsEditing(true)}
+      onClick={handleEdit}
     >
-      <span className="flex-1">{getDisplayValue()}</span>
-      {showSuccess ? (
-        <CheckCircle className="h-3 w-3 text-green-600 animate-pulse" />
-      ) : (
-        <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
+      <span className="text-sm">
+        {formatDisplayValue(displayValue)}
+      </span>
+      {editingState.isSaving && (
+        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
       )}
     </div>
   );
 };
+
+export default EditableField;

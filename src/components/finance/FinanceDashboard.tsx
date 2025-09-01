@@ -1,12 +1,97 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Calendar, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { EditableField } from "./EditableField";
-import { useFinancialData } from "@/hooks/useFinancialData";
-import { Skeleton } from "@/components/ui/skeleton";
 
 const FinanceDashboard = () => {
-  const { summary, payouts, loading, error, updatePayout } = useFinancialData();
+  // Mock data - substituir por dados reais
+  const kpis = [
+    {
+      title: "Saldo Total",
+      value: "R$ 45.230,50",
+      change: "+12.5%",
+      trend: "up",
+      icon: DollarSign,
+      description: "vs. mês anterior"
+    },
+    {
+      title: "Receitas do Mês",
+      value: "R$ 28.450,00",
+      change: "+8.2%",
+      trend: "up", 
+      icon: TrendingUp,
+      description: "abril 2024"
+    },
+    {
+      title: "Despesas do Mês",
+      value: "R$ 15.220,00",
+      change: "-5.1%",
+      trend: "down",
+      icon: TrendingDown,
+      description: "redução vs. março"
+    },
+    {
+      title: "Cachês Pendentes",
+      value: "R$ 8.500,00",
+      change: "3 pagamentos",
+      trend: "warning",
+      icon: AlertCircle,
+      description: "próximos 7 dias"
+    }
+  ];
+
+  const upcomingPayments = [
+    {
+      id: 1,
+      beneficiary: "João Silva",
+      event: "Show Acústico - Bar Central",
+      amount: 2500,
+      dueDate: new Date(2024, 3, 28),
+      type: "musician"
+    },
+    {
+      id: 2,
+      beneficiary: "Maria Santos",
+      event: "Festa Corporativa - Hotel Plaza",
+      amount: 3000,
+      dueDate: new Date(2024, 3, 30),
+      type: "musician"
+    },
+    {
+      id: 3,
+      beneficiary: "Técnico Som & Luz",
+      event: "Festival de Verão",
+      amount: 3000,
+      dueDate: new Date(2024, 4, 2),
+      type: "service"
+    }
+  ];
+
+  const recentEvents = [
+    {
+      id: 1,
+      name: "Show Beneficente - Teatro Municipal",
+      date: new Date(2024, 3, 20),
+      income: 12000,
+      expenses: 4500,
+      result: 7500
+    },
+    {
+      id: 2,
+      name: "Festa de Casamento - Sitio das Flores",
+      date: new Date(2024, 3, 18),
+      income: 8500,
+      expenses: 2800,
+      result: 5700
+    },
+    {
+      id: 3,
+      name: "Aniversário Corporativo - Empresa XYZ",
+      date: new Date(2024, 3, 15),
+      income: 6000,
+      expenses: 1200,
+      result: 4800
+    }
+  ];
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -15,11 +100,11 @@ const FinanceDashboard = () => {
     }).format(value);
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',
       month: '2-digit'
-    }).format(new Date(dateString));
+    }).format(date);
   };
 
   const getTrendColor = (trend: string) => {
@@ -39,88 +124,6 @@ const FinanceDashboard = () => {
       default: return null;
     }
   };
-
-  const kpis = [
-    {
-      title: "Saldo Total",
-      value: formatCurrency(summary.totalBalance),
-      change: "+12.5%",
-      trend: "up",
-      icon: DollarSign,
-      description: "vs. mês anterior"
-    },
-    {
-      title: "Receitas do Mês",
-      value: formatCurrency(summary.monthlyIncome),
-      change: "+8.2%",
-      trend: "up", 
-      icon: TrendingUp,
-      description: "mês atual"
-    },
-    {
-      title: "Despesas do Mês",
-      value: formatCurrency(summary.monthlyExpenses),
-      change: "-5.1%",
-      trend: "down",
-      icon: TrendingDown,
-      description: "mês atual"
-    },
-    {
-      title: "Cachês Pendentes",
-      value: formatCurrency(summary.pendingPayouts),
-      change: `${payouts.filter(p => p.status === 'pending').length} pagamentos`,
-      trend: "warning",
-      icon: AlertCircle,
-      description: "próximos 7 dias"
-    }
-  ];
-
-  // Filtrar payouts pendentes dos próximos 7 dias
-  const upcomingPayments = payouts
-    .filter(payout => {
-      const dueDate = new Date(payout.due_date);
-      const today = new Date();
-      const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-      return payout.status === 'pending' && dueDate >= today && dueDate <= nextWeek;
-    })
-    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
-
-  // TODO: Implementar eventos recentes baseados em dados reais
-  const recentEvents: any[] = [];
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-4 w-24" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-32 mb-2" />
-                <Skeleton className="h-4 w-20" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center text-red-500">
-              Erro ao carregar dados financeiros: {error}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -170,19 +173,13 @@ const FinanceDashboard = () => {
                     <div className="flex items-center gap-3">
                       <Users className="h-4 w-4 text-muted-foreground" />
                       <div>
-                        <p className="font-medium text-sm">{payment.recipient_name}</p>
-                        <p className="text-xs text-muted-foreground">{payment.description}</p>
+                        <p className="font-medium text-sm">{payment.beneficiary}</p>
+                        <p className="text-xs text-muted-foreground">{payment.event}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <EditableField
-                        value={payment.amount}
-                        type="currency"
-                        onSave={(newValue) => updatePayout(payment.id, { amount: Number(newValue) })}
-                        className="font-medium"
-                        label="Valor do pagamento"
-                      />
-                      <p className="text-xs text-muted-foreground">{formatDate(payment.due_date)}</p>
+                      <p className="font-semibold text-sm">{formatCurrency(payment.amount)}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(payment.dueDate)}</p>
                     </div>
                   </div>
                 ))}

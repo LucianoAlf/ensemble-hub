@@ -21,20 +21,63 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1) Set up auth listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+    let isMounted = true;
+    
+    const handleAuthError = async (error: Error | { message?: string }) => {
+      console.error('Auth error:', error);
+      if (error?.message?.includes('refresh token') || error?.message?.includes('Invalid Refresh Token')) {
+        console.log('Invalid refresh token detected, clearing session...');
+        await supabase.auth.signOut();
+        setSession(null);
+        setUser(null);
+        toast('Sessão expirada', { description: 'Por favor, faça login novamente.' });
+      }
+    };
+
+    // 1) Set up auth listener with error handling
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      if (!isMounted) return;
+      
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
+      
+      // Handle specific auth events
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setUser(null);
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed successfully');
+      } else if (event === 'USER_UPDATED') {
+        console.log('User updated');
+      }
     });
 
-    // 2) Then get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // 2) Get initial session with error handling
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          await handleAuthError(error);
+        } else if (isMounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+      } catch (error) {
+        console.error('Error getting initial session:', error);
+        await handleAuthError(error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    getInitialSession();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn: AuthContextValue["signIn"] = async (email, password) => {
@@ -44,7 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } else {
       toast("Bem-vindo!", { description: "Login realizado com sucesso." });
     }
-    return { error: error ? new Error(error.message) : null };
+    return { error: error as Error | null };
   };
 
   const signUp: AuthContextValue["signUp"] = async (email, password) => {
@@ -59,7 +102,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } else {
       toast("Verifique seu e-mail", { description: "Enviamos um link de confirmação." });
     }
-    return { error: error ? new Error(error.message) : null };
+    return { error: error as Error | null };
   };
 
   const signInWithGoogle: AuthContextValue["signInWithGoogle"] = async () => {
@@ -67,38 +110,51 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("Iniciando autenticação Google...");
       
       // Verificação segura de iframe
+      let isIframe = false;
       try {
-        if (window !== window.top) {
-          console.warn("App detectado em iframe, usando fallback...");
-          toast("Redirecionamento necessário", { 
-            description: "Por favor, abra o app em uma nova aba para fazer login com Google." 
-          });
-          // Abrir em nova aba como fallback
-          const newWindow = window.open(window.location.href, '_blank');
-          if (newWindow) {
-            return { error: null };
-          }
-        }
+        isIframe = window !== window.top;
       } catch (e) {
-        // Ignora erro de segurança na verificação de iframe
-        console.log("Verificação de iframe ignorada devido a restrições de segurança");
+        isIframe = true; // Assume iframe se verificação falhar
+        console.log("Verificação de iframe falhou, assumindo iframe:", e);
       }
+      if (isIframe) {
+        console.warn("App detectado em iframe, usando fallback...");
+        toast("Redirecionamento necessário", { 
+          description: "Por favor, abra o app em uma nova aba para fazer login com Google." 
+        });
+        const newWindow = window.open(window.location.href, '_blank');
+        if (newWindow) {
+          return { error: null };
+        } else {
+          toast("Popup bloqueado", { description: "Por favor, permita popups e tente novamente." });
+          return { error: new Error("Popup bloqueado") };
+        }
+      }
+      
+      // Configuração específica para ambiente local
+      const currentOrigin = window.location.origin;
+      const redirectUrl = currentOrigin.includes('localhost') || currentOrigin.includes('127.0.0.1') 
+        ? `${currentOrigin}/auth` 
+        : `${currentOrigin}/dashboard`;
+      
+      console.log('OAuth redirect URL:', redirectUrl);
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: redirectUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
-          }
+          },
+          scopes: 'email profile openid'
         }
       });
 
       if (error) {
         console.error("Erro no OAuth:", error);
         toast("Erro no login com Google", { description: error.message });
-        return { error: error ? new Error(error.message) : null };
+        return { error: error as Error };
       }
 
       // Redirecionamento seguro
@@ -118,7 +174,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             toast("Erro no redirecionamento", { 
               description: "Por favor, permita pop-ups para este site." 
             });
-            return { error: new Error("Redirecionamento bloqueado") };
+            return { error: new Error("Redirecionamento bloqueado") as Error };
           }
         }
       }
@@ -127,7 +183,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error("Erro ao fazer login com Google:", error);
       toast("Erro inesperado", { description: "Tente novamente." });
-      return { error: error instanceof Error ? error : new Error(String(error)) };
+      return { error: error as Error };
     }
   };
 
@@ -138,7 +194,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } else {
       toast("Até breve", { description: "Você saiu da sua conta." });
     }
-    return { error: error ? new Error(error.message) : null };
+    return { error: error as Error | null };
   };
 
   const value = useMemo<AuthContextValue>(() => ({ user, session, loading, signIn, signUp, signOut, signInWithGoogle }), [user, session, loading]);

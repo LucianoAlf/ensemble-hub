@@ -36,7 +36,7 @@ interface TechnicalRiderFormProps {
 }
 
 export function TechnicalRiderForm({ data, onChange }: TechnicalRiderFormProps) {
-  const updateField = (field: keyof TechnicalRiderData, value: any) => {
+  const updateField = (field: keyof TechnicalRiderData, value: string | number) => {
     onChange({ ...data, [field]: value });
   };
 

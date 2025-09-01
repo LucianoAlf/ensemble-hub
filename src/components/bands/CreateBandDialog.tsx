@@ -11,34 +11,25 @@ import { RepertoireForm, type RepertoireSongData } from "./forms/RepertoireForm"
 import { TechnicalRiderForm, type TechnicalRiderData } from "./forms/TechnicalRiderForm";
 import { StageMapForm, type StageMapData } from "./forms/StageMapForm";
 
-interface BandData {
-  id: string;
-  nome: string;
-  genero: string | null;
-  descricao: string | null;
-  unidade_id: string;
-  instagram: string | null;
-  facebook: string | null;
-  youtube: string | null;
-  spotify: string | null;
-  apple_music: string | null;
-  soundcloud: string | null;
-  bandcamp: string | null;
-  website: string | null;
-  tenant_id: string;
-  created_at: string;
-  updated_at: string;
-}
-
 interface CreateBandDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onBandCreated: (band: BandData) => void;
+  onBandCreated: (band: Band) => void;
 }
 
 interface Unidade {
   id: string;
   nome: string;
+}
+
+interface Band {
+  id: string;
+  nome: string;
+  genero: string;
+  descricao: string;
+  logo_url?: string;
+  unidade_id?: string;
+  [key: string]: unknown;
 }
 
 type TabType = "info" | "members" | "repertoire" | "rider" | "stagemap";

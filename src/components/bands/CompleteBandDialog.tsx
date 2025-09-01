@@ -20,12 +20,22 @@ interface CompleteBandDialogProps {
   onOpenChange: (open: boolean) => void;
   bandId: string | null;
   mode?: "view" | "edit";
-  onBandUpdated?: (band: any) => void;
+  onBandUpdated?: (band: Band) => void;
 }
 
 interface Unidade {
   id: string;
   nome: string;
+}
+
+interface Band {
+  id: string;
+  nome: string;
+  genero: string;
+  descricao: string;
+  logo_url?: string;
+  unidade_id?: string;
+  [key: string]: unknown;
 }
 
 export function CompleteBandDialog({ 
@@ -99,7 +109,7 @@ export function CompleteBandDialog({
   });
   
   const [unidades, setUnidades] = useState<Unidade[]>([]);
-  const [bandData, setBandData] = useState<any>(null);
+  const [bandData, setBandData] = useState<Band | null>(null);
   
   const { supabase } = useSupabaseOptimized();
   const { toast } = useToast();
@@ -418,11 +428,12 @@ export function CompleteBandDialog({
       }
 
       setCurrentMode("view");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao salvar banda';
       console.error('Erro ao salvar banda:', error);
       toast({
         title: "Erro",
-        description: error.message || "Erro ao salvar banda",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
