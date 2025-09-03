@@ -1348,6 +1348,27 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      get_evento_full: {
+        Args: {
+          p_evento_id: string
+        }
+        Returns: Json
+      }
+      update_evento_full: {
+        Args: {
+          p_evento_id: string
+          p_titulo: string
+          p_tipo: string
+          p_inicio: string
+          p_fim?: string
+          p_local: string
+          p_endereco?: string
+          p_orcamento?: number
+          p_observacoes?: string
+          p_banda_ids?: string[]
+        }
+        Returns: Json
+      }
     }
     Enums: {
       event_status: "rascunho" | "confirmado" | "cancelado"

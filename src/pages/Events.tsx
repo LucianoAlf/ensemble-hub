@@ -5,11 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Calendar, MapPin, Users, DollarSign, Plus, Search, MoreVertical, Clock } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 import { CreateEventDialog } from "@/components/events/CreateEventDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseOptimized } from "@/hooks/useSupabaseOptimized";
+import { useEventModal } from "@/hooks/useEventModal";
 
 interface DatabaseEvent {
   id: string;
@@ -96,8 +98,12 @@ export default function Events() {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<EventItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
-  const { query: querySupabase } = useSupabaseOptimized();
+  const { query: querySupabase, clearCache } = useSupabaseOptimized();
+  const { open: openEventModal } = useEventModal();
 
   const loadEvents = useCallback(async () => {
     try {
@@ -121,7 +127,7 @@ export default function Events() {
           return query;
         },
         {
-          cache: { enabled: false, ttlMs: 60000, key: "events:all-v2" },
+          cache: { enabled: true, ttlMs: 300000, key: "events:all-v2" },
           enableAbortSignal: true,
         }
       );
@@ -198,7 +204,8 @@ export default function Events() {
       
       setEvents((prev) => [evt, ...prev]);
       
-      // Optionally reload events to ensure consistency
+      // Invalidar cache e recarregar eventos para garantir consistência
+      clearCache("events:all-v2");
       await loadEvents();
       
       toast({
@@ -214,7 +221,92 @@ export default function Events() {
         variant: "destructive",
       });
     }
-  }, [loadEvents, toast]);
+  }, [loadEvents, toast, clearCache]);
+
+  const deleteEvent = useCallback(async (eventId: string) => {
+    try {
+      setIsDeleting(true);
+      
+      const res = await querySupabase(
+        async ({ client }) => {
+          // Primeiro tentar delete direto
+          return await client
+            .from('evento')
+            .delete()
+            .eq('id', eventId);
+        },
+        {
+          cache: { enabled: false, ttlMs: 0, key: `delete-event-${eventId}` },
+          enableAbortSignal: false,
+        }
+      );
+
+      if (res.error) {
+        // Se falhar por FK, tentar RPC delete_evento_full
+        if (res.error.message.includes('foreign key') || res.error.message.includes('violates')) {
+          console.log('Delete direto falhou por FK, tentando RPC delete_evento_full...');
+          
+          const rpcRes = await querySupabase(
+            async ({ client }) => {
+              return await client.rpc('delete_evento_full', {
+                p_evento_id: eventId
+              });
+            },
+            {
+              cache: { enabled: false, ttlMs: 0, key: `delete-event-rpc-${eventId}` },
+              enableAbortSignal: false,
+            }
+          );
+          
+          if (rpcRes.error) {
+            throw new Error(rpcRes.error.message || 'Erro ao excluir evento via RPC');
+          }
+        } else {
+          throw new Error(res.error.message || 'Erro ao excluir evento');
+        }
+      }
+
+      // Atualizar estado local
+      setEvents((prev) => prev.filter(e => e.id !== eventId));
+      
+      // Invalidar caches
+      clearCache("events:all-v2");
+      clearCache("dashboard:upcoming-events-v1");
+      
+      toast({
+        title: "Evento excluído",
+        description: "O evento foi excluído com sucesso.",
+      });
+      
+    } catch (error) {
+      console.error('Erro ao excluir evento:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast({
+        title: "Erro ao excluir evento",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setEventToDelete(null);
+    }
+  }, [querySupabase, clearCache, toast]);
+
+  const handleDeleteClick = useCallback((event: EventItem, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Events: Abrindo dialog de exclusão para evento:', event.id);
+    setEventToDelete(event);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const handleEventModalOpen = useCallback((eventId: string, source: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Events: Abrindo modal para evento:', eventId);
+    openEventModal(eventId, source);
+  }, [openEventModal]);
 
   return (
     <>
@@ -295,14 +387,31 @@ export default function Events() {
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
-                        <DropdownMenuItem>Editar</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">Excluir</DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onSelect={(e) => handleEventModalOpen(event.id, 'events', e)}
+                        >
+                          Ver Detalhes
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onSelect={(e) => handleEventModalOpen(event.id, 'events', e)}
+                        >
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onSelect={(e) => handleDeleteClick(event, e)}
+                        >
+                          Excluir
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -335,6 +444,30 @@ export default function Events() {
       </main>
 
       <CreateEventDialog open={open} onOpenChange={setOpen} onCreate={handleCreate} />
+      
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o evento "{eventToDelete?.name}"?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => eventToDelete && deleteEvent(eventToDelete.id)}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

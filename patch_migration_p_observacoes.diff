@@ -1,0 +1,19 @@
+--- a/supabase/migrations/20250127000001_create_event_modal_rpcs.sql
++++ b/supabase/migrations/20250127000001_create_event_modal_rpcs.sql
+@@ -88,7 +88,7 @@ CREATE OR REPLACE FUNCTION public.update_evento_full(
+   p_local TEXT,
+   p_endereco TEXT DEFAULT NULL,
+   p_orcamento NUMERIC DEFAULT NULL,
+-  p_descricao TEXT DEFAULT NULL,
++  p_observacoes TEXT DEFAULT NULL,
+   p_banda_ids UUID[] DEFAULT '{}'
+ )
+ RETURNS JSON
+@@ -155,7 +155,7 @@ BEGIN
+       local = p_local,
+       endereco = p_endereco,
+       orcamento = p_orcamento,
+-      descricao = p_descricao,
++      descricao = p_observacoes,
+       updated_at = now()
+     WHERE id = p_evento_id;

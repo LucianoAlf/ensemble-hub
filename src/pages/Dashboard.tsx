@@ -1,13 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSEO } from "@/hooks/useSEO";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, DollarSign, Music2, Users, TrendingUp, AlertTriangle } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { CreateEventDialog } from "@/components/events/CreateEventDialog";
+import { EventEditModal } from "@/components/events/EventEditModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useEventModal } from "@/hooks/useEventModal";
+
 import type { EventItem } from "@/pages/Events";
 
 interface DashboardMetrics {
@@ -32,6 +35,18 @@ interface ChartData {
   despesas: number;
 }
 
+// Função de formatação de data memoizada fora do componente
+const formatEventDate = (isoString: string): string => {
+  const date = new Date(isoString);
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
 const chartData: ChartData[] = [
   { name: 'Jan', receita: 2400, despesas: 1400 },
   { name: 'Fev', receita: 2210, despesas: 1100 },
@@ -42,19 +57,25 @@ const chartData: ChartData[] = [
 ];
 
 const Dashboard = () => {
-  const { toast } = useToast();
   const { user } = useAuth();
-  const [openEventDialog, setOpenEventDialog] = useState(false);
+  const { toast } = useToast();
+  const { eventId: selectedEventId, isOpen: isModalOpen, open: openModal, close: closeModal } = useEventModal();
+  
   const [dashboardMetrics, setDashboardMetrics] = useState<DashboardMetrics>({
     active_bands: 0,
     upcoming_events: 0,
     total_members: 0,
-    monthly_revenue: 0
+    monthly_revenue: 0,
   });
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasTenantId, setHasTenantId] = useState<boolean | null>(null);
+  
+  // Controle para evitar múltiplas chamadas simultâneas
+  const isLoadingRef = useRef(false);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const loadCountRef = useRef(0);
 
   useSEO({
     title: "Dashboard — LA Music Hub",
@@ -62,11 +83,7 @@ const Dashboard = () => {
     canonical: window.location.origin + "/dashboard",
   });
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const checkUserTenantId = async () => {
+  const checkUserTenantId = useCallback(async () => {
     try {
       if (!user?.id) {
         setHasTenantId(false);
@@ -93,9 +110,22 @@ const Dashboard = () => {
       setHasTenantId(false);
       return false;
     }
-  };
+  }, [user?.id]);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
+    // Incrementar contador de chamadas para logs
+    loadCountRef.current += 1;
+    const currentLoadId = loadCountRef.current;
+    console.log(`Dashboard: loadDashboardData chamada #${currentLoadId} iniciada`);
+    
+    // Verificar se já há uma chamada em andamento
+    if (isLoadingRef.current) {
+      console.log(`Dashboard: loadDashboardData #${currentLoadId} cancelada - já há uma chamada em andamento`);
+      return;
+    }
+    
+    // Marcar como carregando
+    isLoadingRef.current = true;
     try {
       setIsLoading(true);
       setError(null);
@@ -138,28 +168,43 @@ const Dashboard = () => {
       }
 
       // Carregar eventos próximos
-      const { data: events, error: eventsError } = await supabase
-        .from('evento')
-        .select('id, titulo, inicio, tipo, local')
-        .gte('inicio', new Date().toISOString())
-        .order('inicio', { ascending: true })
-        .limit(4);
+       const eventsResult = await supabase
+         .from('evento')
+         .select('id, titulo, inicio, tipo, local')
+         .gte('inicio', new Date().toISOString())
+         .order('inicio', { ascending: true })
+         .limit(4);
       
-      if (eventsError) {
-        console.error('Events error:', eventsError);
-        throw new Error(`Erro ao carregar eventos: ${eventsError.message}`);
+      if (eventsResult.error) {
+        console.error('Events error:', eventsResult.error);
+        throw new Error(`Erro ao carregar eventos: ${eventsResult.error.message}`);
       }
       
+      // Validação de UUID
+      const isValidUUID = (uuid: string): boolean => {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(uuid);
+      };
+      
       // Validar dados dos eventos
-      if (events && Array.isArray(events)) {
-        const validatedEvents: UpcomingEvent[] = events.map(event => ({
-          id: String(event.id || ''),
-          titulo: String(event.titulo || 'Evento sem título'),
-          inicio: String(event.inicio || ''),
-          tipo: String(event.tipo || ''),
-          local: event.local ? String(event.local) : undefined,
-          banda_nome: undefined
-        }));
+      if (eventsResult.data && Array.isArray(eventsResult.data)) {
+        const validatedEvents: UpcomingEvent[] = eventsResult.data
+          .filter(event => {
+            const eventId = String(event.id || '');
+            if (!isValidUUID(eventId)) {
+              console.warn('Dashboard: Evento com ID inválido filtrado:', eventId);
+              return false;
+            }
+            return true;
+          })
+          .map(event => ({
+            id: String(event.id),
+            titulo: String(event.titulo || 'Evento sem título'),
+            inicio: String(event.inicio || ''),
+            tipo: String(event.tipo || ''),
+            local: event.local ? String(event.local) : undefined,
+            banda_nome: undefined
+          }));
         setUpcomingEvents(validatedEvents);
       }
     } catch (error) {
@@ -176,14 +221,44 @@ const Dashboard = () => {
         });
       }
     } finally {
+      // Garantir que isLoading seja false apenas após sucesso completo
       setIsLoading(false);
+      isLoadingRef.current = false;
+      console.log(`Dashboard: loadDashboardData #${currentLoadId} finalizada`);
     }
-  }
+  }, [user?.id, toast, checkUserTenantId]);
 
-  const handleCreateEvent = async () => {
+  // Função com debounce para evitar chamadas muito frequentes
+  const loadDashboardDataWithDebounce = useCallback(() => {
+    // Limpar timeout anterior se existir
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    // Configurar novo timeout de 500ms
+    debounceTimeoutRef.current = setTimeout(() => {
+      loadDashboardData();
+    }, 500);
+  }, [loadDashboardData]);
+
+  useEffect(() => {
+    console.log('Dashboard: useEffect executado - carregando dados iniciais');
+    loadDashboardDataWithDebounce();
+    
+    // Cleanup: limpar timeout quando componente for desmontado
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+        console.log('Dashboard: Timeout de debounce limpo no cleanup');
+      }
+    };
+  }, [loadDashboardDataWithDebounce]);
+
+  const handleCreateEvent = useCallback(async () => {
     try {
       // The CreateEventDialog now handles the API call internally
       // Just reload the dashboard data to show the new event
+      console.log('Dashboard: Recarregando dados após criação de evento');
       await loadDashboardData();
       toast({
         title: "Evento criado",
@@ -192,7 +267,15 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error after creating event:', error);
     }
-  };
+  }, [loadDashboardData, toast]);
+
+  // Memoizar valores formatados para evitar recálculos desnecessários
+  const formattedMetrics = useMemo(() => ({
+    activeBands: (dashboardMetrics.active_bands || 0).toString(),
+    upcomingEvents: (dashboardMetrics.upcoming_events || 0).toString(),
+    totalMembers: (dashboardMetrics.total_members || 0).toString(),
+    monthlyRevenue: `R$ ${(dashboardMetrics.monthly_revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+  }), [dashboardMetrics]);
 
   return (
     <main className="container mx-auto space-y-6 px-6 py-8">
@@ -201,142 +284,175 @@ const Dashboard = () => {
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">Resumo das suas atividades</p>
         </div>
-        <Button variant="hero" onClick={() => setOpenEventDialog(true)}>
-          <CalendarDays className="mr-2 h-4 w-4"/>
-          Novo Evento
-        </Button>
+        <CreateEventDialog open={false} onOpenChange={() => {}} onCreate={handleCreateEvent} />
       </header>
 
       {error && (
         <Card className="border-destructive">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              <p className="text-destructive text-center font-medium">
-                {error.includes('tenant_id') ? 'Configuração Necessária' : 'Erro ao Carregar Dados'}
-              </p>
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <p className="text-sm font-medium">{error}</p>
             </div>
-            <p className="text-destructive text-center text-sm mb-4">{error}</p>
-            {error.includes('tenant_id') ? (
-              <div className="text-center text-sm text-muted-foreground">
-                <p>Para usar o sistema, você precisa:</p>
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Ser associado a uma organização (tenant)</li>
-                  <li>Entrar em contato com o administrador do sistema</li>
-                  <li>Aguardar a configuração do seu perfil</li>
-                </ul>
-              </div>
-            ) : (
-              <Button 
-                variant="outline" 
-                className="mt-4 w-full" 
-                onClick={loadDashboardData}
-                disabled={isLoading}
-              >
-                Tentar novamente
-              </Button>
-            )}
           </CardContent>
         </Card>
       )}
 
-      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
-          title="Bandas Ativas" 
-          value={String(dashboardMetrics.active_bands)} 
-          icon={<Music2 className="h-4 w-4"/>} 
-          isLoading={isLoading}
-        />
-        <StatCard 
-          title="Próximos Eventos" 
-          value={String(dashboardMetrics.upcoming_events)} 
-          icon={<CalendarDays className="h-4 w-4"/>} 
-          isLoading={isLoading}
-        />
-        <StatCard 
-          title="Receita Mensal" 
-          value={`R$ ${dashboardMetrics.monthly_revenue.toLocaleString('pt-BR')}`} 
-          icon={<DollarSign className="h-4 w-4"/>} 
-          isLoading={isLoading}
-        />
-        <StatCard 
-          title="Integrantes" 
-          value={String(dashboardMetrics.total_members)} 
-          icon={<Users className="h-4 w-4"/>} 
-          isLoading={isLoading}
-        />
-      </section>
+      {hasTenantId === false && (
+        <Card className="border-yellow-500 bg-yellow-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-yellow-700">
+              <AlertTriangle className="h-4 w-4" />
+              <p className="text-sm font-medium">
+                Configuração pendente: Entre em contato com o administrador para configurar seu acesso.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      <section className="grid gap-4 lg:grid-cols-7">
-        <Card className="lg:col-span-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Bandas Ativas"
+          value={formattedMetrics.activeBands}
+          icon={<Music2 className="h-4 w-4 text-muted-foreground" />}
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Próximos Eventos"
+          value={formattedMetrics.upcomingEvents}
+          icon={<CalendarDays className="h-4 w-4 text-muted-foreground" />}
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Total de Membros"
+          value={formattedMetrics.totalMembers}
+          icon={<Users className="h-4 w-4 text-muted-foreground" />}
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Receita Mensal"
+          value={formattedMetrics.monthlyRevenue}
+          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+          isLoading={isLoading}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4">
           <CardHeader>
-            <CardTitle className="inline-flex items-center gap-2"><TrendingUp className="h-4 w-4"/>Receita vs Despesas</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Receitas vs Despesas
+            </CardTitle>
           </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <CardContent className="pl-2">
+            <ResponsiveContainer width="100%" height={350}>
               <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorReceita" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.5}/>
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorDespesas" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.5}/>
-                    <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))"/>
-                <YAxis stroke="hsl(var(--muted-foreground))"/>
-                <Tooltip cursor={{ stroke: 'hsl(var(--border))' }} contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--popover-foreground))' }}/>
-                <Area type="monotone" dataKey="receita" stroke="hsl(var(--primary))" fill="url(#colorReceita)" strokeWidth={2}/>
-                <Area type="monotone" dataKey="despesas" stroke="hsl(var(--accent))" fill="url(#colorDespesas)" strokeWidth={2}/>
+                <XAxis
+                  dataKey="name"
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `R$${value}`}
+                />
+                <Tooltip
+                  formatter={(value, name) => [
+                    `R$ ${value}`,
+                    name === 'receita' ? 'Receita' : 'Despesas'
+                  ]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="receita"
+                  stackId="1"
+                  stroke="#8884d8"
+                  fill="#8884d8"
+                  fillOpacity={0.6}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="despesas"
+                  stackId="1"
+                  stroke="#82ca9d"
+                  fill="#82ca9d"
+                  fillOpacity={0.6}
+                />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
-
-        <Card className="lg:col-span-3">
+        <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Próximos Eventos</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 max-h-[400px] overflow-y-auto">
-            {upcomingEvents.length > 0 ? upcomingEvents.map((event) => (
-              <div key={event.id} className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <p className="font-medium">{event.titulo}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatEventDate(event.inicio)} • {event.banda_nome || 'Sem banda'}
+          <CardContent>
+            <div className="space-y-4">
+              {isLoading ? (
+                <div className="space-y-2">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="h-16 bg-muted animate-pulse rounded" />
+                  ))}
+                </div>
+              ) : upcomingEvents.length > 0 ? (
+                upcomingEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => openModal(event.id, 'dashboard')}
+                  >
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {event.titulo}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatEventDate(event.inicio)} • {event.tipo}
+                      </p>
+                      {event.local && (
+                        <p className="text-xs text-muted-foreground">
+                          📍 {event.local}
+                        </p>
+                      )}
+                    </div>
+                    <Button variant="ghost" size="sm">
+                      Ver detalhes
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6">
+                  <CalendarDays className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <h3 className="mt-2 text-sm font-semibold">Nenhum evento próximo</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Crie um novo evento para começar.
                   </p>
                 </div>
-                <Button variant="ghost" size="sm">Ver</Button>
-              </div>
-            )) : (
-              <div className="text-center py-4 text-muted-foreground">
-                <p>Nenhum evento próximo</p>
-              </div>
-            )}
+              )}
+            </div>
           </CardContent>
         </Card>
-      </section>
+      </div>
 
-      <CreateEventDialog 
-        open={openEventDialog} 
-        onOpenChange={setOpenEventDialog} 
-        onCreate={handleCreateEvent} 
-      />
+      {selectedEventId && (
+        <EventEditModal
+          eventId={selectedEventId}
+          open={isModalOpen}
+          onOpenChange={closeModal}
+          onEventUpdated={loadDashboardData}
+        />
+      )}
     </main>
   );
 };
 
-function formatEventDate(isoString: string) {
-  const date = new Date(isoString);
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
+// Função formatEventDate movida para o topo do arquivo
 
 interface StatCardProps {
   title: string;
@@ -350,19 +466,14 @@ function StatCard({ title, value, icon, isLoading = false }: StatCardProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <span className="text-muted-foreground">{icon}</span>
+        {icon}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">
-          {isLoading ? (
-            <div className="h-8 w-16 bg-muted animate-pulse rounded" />
-          ) : (
-            value
-          )}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {isLoading ? 'Carregando...' : 'Atualizado agora'}
-        </p>
+        {isLoading ? (
+          <div className="h-7 bg-muted animate-pulse rounded" />
+        ) : (
+          <div className="text-2xl font-bold">{value}</div>
+        )}
       </CardContent>
     </Card>
   );

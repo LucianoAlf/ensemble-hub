@@ -1,0 +1,97 @@
+{
+  "timestamp": "2025-09-03T03:10:14.526Z",
+  "status": "CONCLUÍDA",
+  "resultados": {
+    "schema": {
+      "profiles": {
+        "existe": true,
+        "registros": 0,
+        "erro": null
+      },
+      "banda": {
+        "existe": true,
+        "registros": 0,
+        "erro": null
+      },
+      "evento": {
+        "existe": true,
+        "registros": 18,
+        "erro": null
+      },
+      "banda_membro": {
+        "existe": true,
+        "registros": 0,
+        "erro": null
+      },
+      "evento_banda": {
+        "existe": true,
+        "registros": 0,
+        "erro": null
+      },
+      "financeiro": {
+        "existe": true,
+        "registros": 0,
+        "erro": null
+      },
+      "transactions": {
+        "existe": true,
+        "registros": 0,
+        "erro": null
+      },
+      "payouts": {
+        "existe": true,
+        "registros": 0,
+        "erro": null
+      }
+    },
+    "rls": {
+      "erro": "Could not find the table 'public.pg_policies' in the schema cache"
+    },
+    "rpcs": {
+      "erro": "Could not find the table 'public.pg_proc' in the schema cache"
+    },
+    "integridade": {
+      "profiles_orfaos": {
+        "success": true,
+        "error": null,
+        "data": [],
+        "count": 0
+      },
+      "banda_membro_orfaos": {
+        "success": false,
+        "error": "column banda_membro.profile_id does not exist",
+        "data": null,
+        "count": 0
+      }
+    },
+    "tenant": {
+      "profiles": {
+        "tem_tenant_id": true,
+        "registros_sem_tenant": false
+      },
+      "banda": {
+        "tem_tenant_id": true,
+        "registros_sem_tenant": false
+      },
+      "evento": {
+        "tem_tenant_id": true,
+        "registros_sem_tenant": false
+      },
+      "financeiro": {
+        "tem_tenant_id": true,
+        "registros_sem_tenant": false
+      },
+      "transactions": {
+        "tem_tenant_id": true,
+        "registros_sem_tenant": false
+      },
+      "payouts": {
+        "tem_tenant_id": true,
+        "registros_sem_tenant": false
+      }
+    },
+    "performance": {
+      "erro": "Could not find the table 'public.pg_indexes' in the schema cache"
+    }
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "timestamp": "2025-09-03T03:56:06.359Z",
+  "pontos_positivos": [],
+  "alertas": [
+    "⚠️ Problemas na execução de queries de performance"
+  ],
+  "pontos_criticos": [
+    "🚨 Falha ao acessar informações do schema"
+  ],
+  "patches_sql": [],
+  "resultados_detalhados": {
+    "inventario": {
+      "colunas": {
+        "success": false,
+        "error": "Could not find the function public.sql(query) in the schema cache",
+        "data": null
+      },
+      "constraints": {
+        "success": false,
+        "error": "Could not find the function public.sql(query) in the schema cache",
+        "data": null
+      },
+      "indices": {
+        "success": false,
+        "error": "Could not find the function public.sql(query) in the schema cache",
+        "data": null
+      }
+    },
+    "rls": {
+      "rls": {
+        "success": false,
+        "error": "Could not find the function public.sql(query) in the schema cache",
+        "data": null
+      },
+      "politicas": {
+        "success": false,
+        "error": "Could not find the function public.sql(query) in the schema cache",
+        "data": null
+      }
+    },
+    "tenant": {
+      "tenantTables": {
+        "success": false,
+        "error": "Could not find the function public.sql(query) in the schema cache",
+        "data": null
+      },
+      "mismatches": {
+        "success": false,
+        "error": "Could not find the function public.sql(query) in the schema cache",
+        "data": null
+      }
+    },
+    "orfaos": {
+      "orfaos": {
+        "success": false,
+        "error": "Could not find the function public.sql(query) in the schema cache",
+        "data": null
+      }
+    },
+    "datetime": {
+      "datetime": {
+        "success": false,
+        "error": "Could not find the function public.sql(query) in the schema cache",
+        "data": null
+      }
+    },
+    "rpcs": {
+      "funcoes": {
+        "success": false,
+        "error": "Could not find the function public.sql(query) in the schema cache",
+        "data": null
+      },
+      "privilegios": {
+        "success": false,
+        "error": "Could not find the function public.sql(query) in the schema cache",
+        "data": null
+      }
+    },
+    "performance": {
+      "performance": {
+        "success": false,
+        "error": "Could not find the function public.sql(query) in the schema cache",
+        "data": null
+      }
+    }
+  }
+}
