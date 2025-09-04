@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,84 +7,111 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, Edit, Check, Trash2, Music, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-
-interface Transaction {
-  id: string;
-  date: Date;
-  type: 'income' | 'expense';
-  category: string;
-  description: string;
-  event?: string;
-  band?: string;
-  counterparty?: string;
-  amount: number;
-  status: 'pending' | 'scheduled' | 'settled';
-}
+import { useTransactions } from "@/hooks/useFinancialData";
+import { useTenant } from "@/hooks/useTenant";
+// Remove unused import since FinancialTransaction type is not directly used
 
 export const TransactionsTable = () => {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20); // 20 itens por página para melhor performance
+  const { tenantId } = useTenant();
+  const { transactions, loading, error } = useTransactions(tenantId || '', {});
 
-  // TODO: Load real data from database
-  const transactions: Transaction[] = [
-    {
-      id: "1",
-      date: new Date(),
-      type: "income",
-      category: "Ingressos",
-      description: "Venda de ingressos - Show do Rock",
-      event: "Show do Rock",
-      band: "Banda XYZ",
-      counterparty: "Eventbrite",
-      amount: 5000.00,
-      status: "settled"
-    },
-    {
-      id: "2",
-      date: new Date(),
-      type: "expense", 
-      category: "Transporte",
-      description: "Combustível para o show",
-      event: "Show do Rock",
-      band: "Banda XYZ",
-      counterparty: "Posto Shell",
-      amount: 300.00,
-      status: "pending"
-    }
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-muted-foreground">Carregando transações...</div>
+      </div>
+    );
+  }
 
-  const formatCurrency = (value: number) => {
+  if (error) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-destructive">Erro ao carregar transações: {error}</div>
+      </div>
+    );
+  }
+
+  // Memoizar formatador de moeda para evitar recriação
+  // Move useCallback hook before any conditional returns
+  const formatCurrency = useCallback((value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
-  };
+  }, []);
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      pending: { variant: "outline" as const, label: "Pendente" },
-      scheduled: { variant: "secondary" as const, label: "Agendado" },
-      settled: { variant: "default" as const, label: "Pago/Recebido" }
-    };
-    
-    const config = variants[status as keyof typeof variants];
+  // Memoizar configuração de status badges
+  const statusVariants = useMemo(() => ({
+    pending: { variant: "outline" as const, label: "Pendente" },
+    scheduled: { variant: "secondary" as const, label: "Agendado" },
+    settled: { variant: "default" as const, label: "Pago/Recebido" },
+    completed: { variant: "default" as const, label: "Concluído" }
+  }), []);
+
+  const getStatusBadge = useCallback((status: string) => {
+    const config = statusVariants[status as keyof typeof statusVariants] || { variant: "outline" as const, label: status };
     return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
+  }, [statusVariants]);
 
-  const handleSelectRow = (id: string, checked: boolean) => {
-    if (checked) {
-      setSelectedRows([...selectedRows, id]);
-    } else {
-      setSelectedRows(selectedRows.filter(rowId => rowId !== id));
-    }
-  };
+  // Calcular dados de paginação
+  const totalPages = Math.ceil(transactions.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTransactions = useMemo(() => {
+    return transactions.slice(startIndex, endIndex);
+  }, [transactions, startIndex, endIndex]);
 
-  const handleSelectAll = (checked: boolean) => {
+  // Memoizar formatação de datas para evitar recálculos
+  const formatDate = useCallback((date: string) => {
+    return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
+  }, []);
+
+  // Fix 1: Add missing goToPage function and fix goToPreviousPage definition
+  const goToPage = useCallback((page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  }, [totalPages]);
+  
+  const goToPreviousPage = useCallback(() => {
+    goToPage(currentPage - 1);
+  }, [currentPage, goToPage]);
+  
+  const goToNextPage = useCallback(() => {
+    goToPage(currentPage + 1);
+  }, [currentPage, goToPage]);
+  
+  // Fix 2: Update pagination buttons to use handlePageChange instead of goToPage
+  // Handlers de paginação
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  }, [totalPages]);
+
+  // Otimizar handlers de seleção com useCallback
+  // Move useCallback hook before conditional returns to avoid React Hook errors
+  const handleSelectRow = useCallback((id: string, checked: boolean) => {
+    setSelectedRows(prev => {
+      if (checked) {
+        return [...prev, id];
+      } else {
+        return prev.filter(rowId => rowId !== id);
+      }
+    });
+  }, []);
+
+  // Move useCallback hook before conditional returns to avoid React Hook errors
+const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedRows(transactions.map(t => t.id));
+      // Selecionar apenas as transações da página atual
+      const currentPageIds = paginatedTransactions.map(t => t.id);
+      setSelectedRows(prev => [...new Set([...prev, ...currentPageIds])]);
     } else {
-      setSelectedRows([]);
+      // Desselecionar apenas as transações da página atual
+      const currentPageIds = new Set(paginatedTransactions.map(t => t.id));
+      setSelectedRows(prev => prev.filter(id => !currentPageIds.has(id)));
     }
-  };
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -112,7 +139,14 @@ export const TransactionsTable = () => {
             <TableRow>
               <TableHead className="w-12">
                 <Checkbox
-                  checked={selectedRows.length === transactions.length}
+                  checked={
+                    paginatedTransactions.length > 0 && 
+                    paginatedTransactions.every(t => selectedRows.includes(t.id))
+                  }
+                  data-indeterminate={
+                    paginatedTransactions.some(t => selectedRows.includes(t.id)) &&
+                    !paginatedTransactions.every(t => selectedRows.includes(t.id))
+                  }
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
@@ -129,7 +163,7 @@ export const TransactionsTable = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.map((transaction) => (
+            {paginatedTransactions.map((transaction) => (
               <TableRow key={transaction.id}>
                 <TableCell>
                   <Checkbox
@@ -138,7 +172,7 @@ export const TransactionsTable = () => {
                   />
                 </TableCell>
                 <TableCell className="font-medium">
-                  {format(transaction.date, "dd/MM/yyyy", { locale: ptBR })}
+                  {formatDate(transaction.created_at)}
                 </TableCell>
                 <TableCell>
                   <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'}>
@@ -150,18 +184,18 @@ export const TransactionsTable = () => {
                   {transaction.description}
                 </TableCell>
                 <TableCell>
-                  {transaction.event && (
+                  {transaction.evento_id && (
                     <Badge variant="outline" className="gap-1">
                       <Calendar className="h-3 w-3" />
-                      {transaction.event}
+                      {transaction.evento_id}
                     </Badge>
                   )}
                 </TableCell>
                 <TableCell>
-                  {transaction.band && (
+                  {transaction.banda_id && (
                     <Badge variant="outline" className="gap-1">
                       <Music className="h-3 w-3" />
-                      {transaction.band}
+                      {transaction.banda_id}
                     </Badge>
                   )}
                 </TableCell>
@@ -170,7 +204,7 @@ export const TransactionsTable = () => {
                 </TableCell>
                 <TableCell className="text-right font-medium">
                   <span className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}>
-                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.gross_amount)}
                   </span>
                 </TableCell>
                 <TableCell>
@@ -206,19 +240,48 @@ export const TransactionsTable = () => {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          Mostrando {transactions.length} de {transactions.length} resultado(s)
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Mostrando {startIndex + 1} a {Math.min(endIndex, transactions.length)} de {transactions.length} transações
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToPreviousPage}
+              disabled={currentPage === 1}
+            >
+              Anterior
+            </Button>
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNumber = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                if (pageNumber > totalPages) return null;
+                return (
+                  <Button
+                    key={pageNumber}
+                    variant={currentPage === pageNumber ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(pageNumber)}
+                    className="w-8 h-8 p-0"
+                  >
+                    {pageNumber}
+                  </Button>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToNextPage}
+              disabled={currentPage === totalPages}
+            >
+              Próxima
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled>
-            Anterior
-          </Button>
-          <Button variant="outline" size="sm" disabled>
-            Próximo
-          </Button>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

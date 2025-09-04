@@ -3,11 +3,12 @@ import { useState, useCallback, useRef } from 'react';
 type Source = 'dashboard' | 'events';
 
 interface UseEventModalReturn {
-  open: (eventId: string, source: Source) => void;
+  open: (eventId: string, source: Source, mode?: 'view' | 'edit') => void;
   close: () => void;
   isOpen: boolean;
   eventId: string | null;
   source: Source | null;
+  mode: 'view' | 'edit' | null;
   setFocusRef: (element: HTMLElement | null) => void;
 }
 
@@ -15,12 +16,14 @@ interface EventModalState {
   isOpen: boolean;
   eventId: string | null;
   source: Source | null;
+  mode: 'view' | 'edit' | null;
 }
 
 const initialState: EventModalState = {
   isOpen: false,
   eventId: null,
   source: null,
+  mode: null,
 };
 
 /**
@@ -33,11 +36,12 @@ export function useEventModal(): UseEventModalReturn {
   const [state, setState] = useState<EventModalState>(initialState);
   const focusReturnRef = useRef<HTMLElement | null>(null);
 
-  const open = useCallback((eventId: string, source: Source) => {
+  const open = useCallback((eventId: string, source: Source, mode: 'view' | 'edit' = 'edit') => {
     setState({
       isOpen: true,
       eventId,
       source,
+      mode,
     });
   }, []);
 
@@ -65,6 +69,7 @@ export function useEventModal(): UseEventModalReturn {
     isOpen: state.isOpen,
     eventId: state.eventId,
     source: state.source,
+    mode: state.mode,
     setFocusRef,
   };
 }

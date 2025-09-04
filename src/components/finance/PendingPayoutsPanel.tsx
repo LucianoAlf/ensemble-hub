@@ -2,74 +2,56 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Users, Calendar, DollarSign } from "lucide-react";
-import { format, addDays } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { FinancialPayout } from "@/types/financial";
+import { financialCalculations } from "@/services/financialCalculationService";
 
-interface PendingPayout {
-  id: string;
-  beneficiary: string;
-  event: string;
-  dueDate: Date;
-  amount: number;
-  type: 'band' | 'member' | 'crew' | 'manager';
-}
+// Interface removida - usando FinancialPayout do types/financial.ts
 
 export const PendingPayoutsPanel = () => {
-  // TODO: Load real data from database
-  const pendingPayouts: PendingPayout[] = [
-    {
-      id: "1",
-      beneficiary: "João Silva",
-      event: "Show do Rock",
-      dueDate: addDays(new Date(), 2),
-      amount: 1500.00,
-      type: "member"
-    },
-    {
-      id: "2", 
-      beneficiary: "Banda XYZ",
-      event: "Festival de Verão",
-      dueDate: addDays(new Date(), 5),
-      amount: 3000.00,
-      type: "band"
-    },
-    {
-      id: "3",
-      beneficiary: "Sound Engineer",
-      event: "Show Acústico",
-      dueDate: addDays(new Date(), 1),
-      amount: 800.00,
-      type: "crew"
-    }
-  ];
+  const [pendingPayouts, setPendingPayouts] = useState<FinancialPayout[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadPendingPayouts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Buscar payouts pendentes do Supabase
+        const { data: payoutsData, error: payoutsError } = await supabase
+          .from('payouts')
+          .select('*')
+          .eq('status', 'pending')
+          .order('scheduled_date', { ascending: true });
+
+        if (payoutsError) {
+          throw payoutsError;
+        }
+
+        // Converter para formato padronizado
+        const standardPayouts = financialCalculations.convertDatabasePayouts(payoutsData || []);
+        setPendingPayouts(standardPayouts);
+      } catch (err) {
+        console.error('Erro ao carregar payouts pendentes:', err);
+        setError('Erro ao carregar payouts pendentes');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPendingPayouts();
+  }, []);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
-  };
-
-  const getBeneficiaryIcon = (type: string) => {
-    const icons = {
-      band: Users,
-      member: Users,
-      crew: Users,
-      manager: Users
-    };
-    const Icon = icons[type as keyof typeof icons] || Users;
-    return <Icon className="h-4 w-4" />;
-  };
-
-  const isOverdue = (dueDate: Date) => {
-    return dueDate < new Date();
-  };
-
-  const getDaysUntilDue = (dueDate: Date) => {
-    const today = new Date();
-    const diffTime = dueDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
   };
 
   return (
@@ -84,22 +66,34 @@ export const PendingPayoutsPanel = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {pendingPayouts.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-6 text-muted-foreground">
+            <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <p>Carregando payouts...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-6 text-destructive">
+            <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <p>{error}</p>
+          </div>
+        ) : pendingPayouts.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
             <p>Nenhum pagamento pendente</p>
           </div>
         ) : (
           pendingPayouts.map((payout) => {
-            const daysUntilDue = getDaysUntilDue(payout.dueDate);
-            const overdue = isOverdue(payout.dueDate);
+            const scheduledDate = new Date(payout.scheduled_date);
+            const now = new Date();
+            const daysUntilDue = Math.ceil((scheduledDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            const overdue = daysUntilDue < 0;
             
             return (
               <div key={payout.id} className="space-y-3 p-3 rounded-lg border">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {getBeneficiaryIcon(payout.type)}
-                    <span className="font-medium">{payout.beneficiary}</span>
+                    <Users className="h-4 w-4" />
+                    <span className="font-medium">{payout.recipient || 'Destinatário não informado'}</span>
                   </div>
                   <Badge variant={overdue ? "destructive" : daysUntilDue <= 3 ? "default" : "secondary"}>
                     {overdue ? "Atrasado" : daysUntilDue <= 0 ? "Hoje" : `${daysUntilDue}d`}
@@ -108,9 +102,9 @@ export const PendingPayoutsPanel = () => {
                 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-4 w-4" />
-                  <span>{payout.event}</span>
+                  <span>{payout.description}</span>
                   <span>•</span>
-                  <span>{format(payout.dueDate, "dd/MM/yyyy", { locale: ptBR })}</span>
+                  <span>{format(scheduledDate, "dd/MM/yyyy", { locale: ptBR })}</span>
                 </div>
                 
                 <div className="flex items-center justify-between">

@@ -1,16 +1,45 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, DollarSign, Clock, AlertTriangle } from "lucide-react";
+import { useDashboardMetrics } from "@/hooks/useFinancialData";
+import { useTenant } from "@/hooks/useTenant";
 
-export const KpiBar = () => {
-  // TODO: Load real data from database
+export const KpiBar: React.FC = () => {
+  const { tenantId } = useTenant();
+  const { metrics, loading, error } = useDashboardMetrics(tenantId || '');
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Card key={i}>
+            <CardContent className="p-6">
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (error || !metrics) {
+    return (
+      <div className="text-destructive p-4">
+        Erro ao carregar métricas: {error}
+      </div>
+    );
+  }
+
   const kpis = {
-    balance: 12500.00,
-    income: 25000.00,
-    expenses: 12500.00,
-    result: 12500.00,
-    toReceive: 3500.00,
-    toPay: 1800.00
+    balance: metrics.netAmount,
+    income: metrics.totalIncome,
+    expenses: metrics.totalExpense,
+    result: metrics.netAmount,
+    toReceive: metrics.monthlyIncome,
+    toPay: metrics.pendingPayouts
   };
 
   const formatCurrency = (value: number) => {

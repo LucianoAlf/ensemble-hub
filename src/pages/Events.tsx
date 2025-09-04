@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Calendar, MapPin, Users, DollarSign, Plus, Search, MoreVertical, Clock } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 import { CreateEventDialog } from "@/components/events/CreateEventDialog";
+import { EventEditModal } from "@/components/events/EventEditModal";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseOptimized } from "@/hooks/useSupabaseOptimized";
 import { useEventModal } from "@/hooks/useEventModal";
@@ -103,7 +104,7 @@ export default function Events() {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const { query: querySupabase, clearCache } = useSupabaseOptimized();
-  const { open: openEventModal } = useEventModal();
+  const { open: openEventModal, isOpen, eventId, mode, close } = useEventModal();
 
   const loadEvents = useCallback(async () => {
     try {
@@ -111,26 +112,26 @@ export default function Events() {
       setError(null);
       
       const res = await querySupabase(
-        async ({ client, signal }: SupabaseQueryContext) => {
-          const query = client
-            .from("evento")
-            .select(`
-              id, titulo, tipo, inicio, local, endereco, orcamento, descricao, status
-            `)
-            .gte("inicio", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
-            .order("inicio", { ascending: true });
-            
-          if (signal) {
-            query.abortSignal(signal);
-          }
-          
-          return query;
-        },
-        {
-          cache: { enabled: true, ttlMs: 300000, key: "events:all-v2" },
-          enableAbortSignal: true,
-        }
-      );
+            async ({ client, signal }: SupabaseQueryContext) => {
+              const query = client
+                .from("evento")
+                .select(`
+                  id, titulo, tipo, inicio, local, endereco, orcamento, descricao, status
+                `)
+                .gte("inicio", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
+                .order("inicio", { ascending: true });
+              
+              if (signal) {
+                query.abortSignal(signal);
+              }
+              
+              return query;
+            },
+            {
+              cache: { enabled: true, ttlMs: 300000, key: "events:all-v2" },
+              enableAbortSignal: true,
+            } as const
+          );
 
       if (res.error) {
         throw new Error(res.error.message || 'Erro ao carregar eventos');
@@ -248,14 +249,14 @@ export default function Events() {
           
           const rpcRes = await querySupabase(
             async ({ client }) => {
-              return await client.rpc('delete_evento_full', {
+              return await client.rpc('delete_evento_full' as const, {
                 p_evento_id: eventId
               });
             },
             {
               cache: { enabled: false, ttlMs: 0, key: `delete-event-rpc-${eventId}` },
               enableAbortSignal: false,
-            }
+            } as const
           );
           
           if (rpcRes.error) {
@@ -293,7 +294,7 @@ export default function Events() {
     }
   }, [querySupabase, clearCache, toast]);
 
-  const handleDeleteClick = useCallback((event: EventItem, e: React.MouseEvent) => {
+  const handleDeleteClick = useCallback((event: EventItem, e: Event) => {
     e.preventDefault();
     e.stopPropagation();
     console.log('Events: Abrindo dialog de exclusão para evento:', event.id);
@@ -301,11 +302,11 @@ export default function Events() {
     setDeleteDialogOpen(true);
   }, []);
 
-  const handleEventModalOpen = useCallback((eventId: string, source: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Events: Abrindo modal para evento:', eventId);
-    openEventModal(eventId, source);
+  const handleEventModalOpen = useCallback((eventId: string, source: 'dashboard' | 'events', mode: 'view' | 'edit', e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    console.log('Events: Abrindo modal para evento:', eventId, 'modo:', mode);
+    openEventModal(eventId, source, mode);
   }, [openEventModal]);
 
   return (
@@ -397,12 +398,12 @@ export default function Events() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem 
-                          onSelect={(e) => handleEventModalOpen(event.id, 'events', e)}
+                          onSelect={(e) => { e?.preventDefault(); e?.stopPropagation(); handleEventModalOpen(event.id, 'events', 'view'); }}
                         >
                           Ver Detalhes
                         </DropdownMenuItem>
                         <DropdownMenuItem 
-                          onSelect={(e) => handleEventModalOpen(event.id, 'events', e)}
+                          onSelect={(e) => { e?.preventDefault(); e?.stopPropagation(); handleEventModalOpen(event.id, 'events', 'edit'); }}
                         >
                           Editar
                         </DropdownMenuItem>
@@ -468,6 +469,14 @@ export default function Events() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <EventEditModal
+        eventId={eventId || ''}
+        mode={mode || 'edit'}
+        open={isOpen}
+        onOpenChange={close}
+        onEventUpdated={() => loadEvents()}
+      />
     </>
   );
 }

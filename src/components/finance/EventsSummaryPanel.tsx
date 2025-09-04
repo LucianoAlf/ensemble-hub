@@ -1,8 +1,11 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, TrendingUp, TrendingDown, Music } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useTransactions } from "@/hooks/useFinancialData";
+import { useTenant } from "@/hooks/useTenant";
+import { useMemo } from "react";
 
 interface EventSummary {
   id: string;
@@ -14,49 +17,69 @@ interface EventSummary {
 }
 
 export const EventsSummaryPanel = () => {
-  // TODO: Load real data from database
-  const eventsSummary: EventSummary[] = [
-    {
-      id: "1",
-      name: "Show do Rock",
-      date: new Date(),
-      income: 5000.00,
-      expenses: 2000.00,
-      result: 3000.00
-    },
-    {
-      id: "2",
-      name: "Festival de Verão",
-      date: new Date(),
-      income: 8000.00,
-      expenses: 4500.00,
-      result: 3500.00
-    },
-    {
-      id: "3",
-      name: "Show Acústico",
-      date: new Date(),
-      income: 2500.00,
-      expenses: 1800.00,
-      result: 700.00
-    },
-    {
-      id: "4",
-      name: "Apresentação Corporativa",
-      date: new Date(),
-      income: 1500.00,
-      expenses: 2000.00,
-      result: -500.00
-    },
-    {
-      id: "5",
-      name: "Show Beneficente",
-      date: new Date(),
-      income: 3000.00,
-      expenses: 1500.00,
-      result: 1500.00
-    }
-  ];
+  const { tenantId } = useTenant();
+  const { transactions, loading, error } = useTransactions(tenantId || '', {});
+
+  const eventsSummary = useMemo(() => {
+    if (!transactions || transactions.length === 0) return [];
+
+    const eventsMap = new Map<string, EventSummary>();
+
+    transactions.forEach(transaction => {
+      const eventName = transaction.event || 'Sem evento';
+      
+      if (!eventsMap.has(eventName)) {
+        eventsMap.set(eventName, {
+          id: eventName,
+          name: eventName,
+          date: transaction.date,
+          income: 0,
+          expenses: 0,
+          result: 0
+        });
+      }
+
+      const event = eventsMap.get(eventName)!;
+      
+      if (transaction.type === 'income') {
+        event.income += transaction.amount;
+      } else {
+        event.expenses += transaction.amount;
+      }
+      
+      event.result = event.income - event.expenses;
+    });
+
+    return Array.from(eventsMap.values());
+  }, [transactions]);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Resumo por Evento</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-muted-foreground">Carregando eventos...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Resumo por Evento</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-destructive">Erro ao carregar eventos: {error}</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Usar dados reais calculados do useMemo acima
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -117,7 +140,7 @@ export const EventsSummaryPanel = () => {
                   <div>
                     <div className="font-medium">{event.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {format(event.date, "dd/MM/yyyy", { locale: ptBR })}
+                      {format(new Date(event.date), "dd/MM/yyyy", { locale: ptBR })}
                     </div>
                   </div>
                 </div>

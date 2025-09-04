@@ -1,104 +1,79 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Calendar, Users } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Calendar, Users, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useRealFinancialData } from "@/hooks/useRealFinancialData";
+import { useTenant } from "@/hooks/useTenant";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const FinanceDashboard = () => {
-  // Mock data - substituir por dados reais
-  const kpis = [
-    {
-      title: "Saldo Total",
-      value: "R$ 45.230,50",
-      change: "+12.5%",
-      trend: "up",
-      icon: DollarSign,
-      description: "vs. mês anterior"
-    },
-    {
-      title: "Receitas do Mês",
-      value: "R$ 28.450,00",
-      change: "+8.2%",
-      trend: "up", 
-      icon: TrendingUp,
-      description: "abril 2024"
-    },
-    {
-      title: "Despesas do Mês",
-      value: "R$ 15.220,00",
-      change: "-5.1%",
-      trend: "down",
-      icon: TrendingDown,
-      description: "redução vs. março"
-    },
-    {
-      title: "Cachês Pendentes",
-      value: "R$ 8.500,00",
-      change: "3 pagamentos",
-      trend: "warning",
-      icon: AlertCircle,
-      description: "próximos 7 dias"
-    }
-  ];
+  // Obter tenant_id do usuário autenticado
+  const { tenantId, loading: tenantLoading, error: tenantError, hasTenant } = useTenant();
+  
+  const {
+    summary,
+    upcomingPayments,
+    recentEvents,
+    loading,
+    error,
+    refreshData
+  } = useRealFinancialData(tenantId || '');
 
-  const upcomingPayments = [
-    {
-      id: 1,
-      beneficiary: "João Silva",
-      event: "Show Acústico - Bar Central",
-      amount: 2500,
-      dueDate: new Date(2024, 3, 28),
-      type: "musician"
-    },
-    {
-      id: 2,
-      beneficiary: "Maria Santos",
-      event: "Festa Corporativa - Hotel Plaza",
-      amount: 3000,
-      dueDate: new Date(2024, 3, 30),
-      type: "musician"
-    },
-    {
-      id: 3,
-      beneficiary: "Técnico Som & Luz",
-      event: "Festival de Verão",
-      amount: 3000,
-      dueDate: new Date(2024, 4, 2),
-      type: "service"
-    }
-  ];
-
-  const recentEvents = [
-    {
-      id: 1,
-      name: "Show Beneficente - Teatro Municipal",
-      date: new Date(2024, 3, 20),
-      income: 12000,
-      expenses: 4500,
-      result: 7500
-    },
-    {
-      id: 2,
-      name: "Festa de Casamento - Sitio das Flores",
-      date: new Date(2024, 3, 18),
-      income: 8500,
-      expenses: 2800,
-      result: 5700
-    },
-    {
-      id: 3,
-      name: "Aniversário Corporativo - Empresa XYZ",
-      date: new Date(2024, 3, 15),
-      income: 6000,
-      expenses: 1200,
-      result: 4800
-    }
-  ];
-
+  // Função para formatar valores monetários
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
+
+  // Calcular mudanças percentuais (simuladas por enquanto)
+  const calculateChange = (current: number, type: 'income' | 'expense' | 'balance') => {
+    // Em um cenário real, isso compararia com o mês anterior
+    const changes = {
+      income: "+8.2%",
+      expense: "-5.1%", 
+      balance: "+12.5%"
+    };
+    return changes[type] || "0%";
+  };
+
+  // Gerar KPIs baseados nos dados reais
+  const kpis = summary ? [
+    {
+      title: "Saldo Total",
+      value: formatCurrency(summary.totalBalance),
+      change: calculateChange(summary.totalBalance, 'balance'),
+      trend: summary.totalBalance > 0 ? "up" : "down",
+      icon: DollarSign,
+      description: "vs. mês anterior"
+    },
+    {
+      title: "Receitas do Mês",
+      value: formatCurrency(summary.monthlyIncome),
+      change: calculateChange(summary.monthlyIncome, 'income'),
+      trend: "up", 
+      icon: TrendingUp,
+      description: new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    },
+    {
+      title: "Despesas do Mês",
+      value: formatCurrency(summary.monthlyExpenses),
+      change: calculateChange(summary.monthlyExpenses, 'expense'),
+      trend: "down",
+      icon: TrendingDown,
+      description: "redução vs. mês anterior"
+    },
+    {
+      title: "Cachês Pendentes",
+      value: formatCurrency(summary.pendingPayouts),
+      change: `${upcomingPayments.length} pagamentos`,
+      trend: "warning",
+      icon: AlertCircle,
+      description: "próximos 7 dias"
+    }
+  ] : [];
+
+  // Dados reais já vêm do hook useRealFinancialData
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('pt-BR', {
@@ -124,6 +99,74 @@ const FinanceDashboard = () => {
       default: return null;
     }
   };
+
+  // Tenant loading state
+  if (tenantLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Verificando acesso...</span>
+      </div>
+    );
+  }
+
+  // Tenant error state
+  if (tenantError || !hasTenant) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          {tenantError || 'Usuário não possui acesso ao sistema financeiro. Entre em contato com o administrador.'}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 bg-muted rounded w-24"></div>
+                <div className="h-4 w-4 bg-muted rounded"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-muted rounded w-32 mb-2"></div>
+                <div className="h-4 bg-muted rounded w-20"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2 text-muted-foreground">Carregando dados financeiros...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Erro ao carregar dados financeiros: {error}
+            <button 
+              onClick={refreshData}
+              className="ml-2 underline hover:no-underline"
+            >
+              Tentar novamente
+            </button>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -207,19 +250,17 @@ const FinanceDashboard = () => {
             ) : (
               <div className="space-y-3">
                 {recentEvents.map((event) => (
-                  <div key={event.id} className="p-3 rounded-lg border">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-sm">{event.name}</h4>
-                      <Badge variant={event.result > 0 ? "default" : "destructive"}>
-                        {formatCurrency(event.result)}
-                      </Badge>
+                  <div key={event.id} className="flex items-center justify-between p-3 rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium text-sm">{event.name}</p>
+                        <p className="text-xs text-muted-foreground">Resultado: {event.result >= 0 ? 'Positivo' : 'Negativo'}</p>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{formatDate(event.date)}</span>
-                      <span>
-                        Receita: {formatCurrency(event.income)} | 
-                        Despesas: {formatCurrency(event.expenses)}
-                      </span>
+                    <div className="text-right">
+                      <p className="font-semibold text-sm">{formatCurrency(event.result)}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(event.date)}</p>
                     </div>
                   </div>
                 ))}

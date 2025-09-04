@@ -95,7 +95,7 @@ export const UpsertExpenseDrawer = ({ open, onOpenChange, expenseId }: UpsertExp
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Categoria *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione uma categoria" />
@@ -120,7 +120,7 @@ export const UpsertExpenseDrawer = ({ open, onOpenChange, expenseId }: UpsertExp
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Evento</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um evento" />
@@ -142,7 +142,7 @@ export const UpsertExpenseDrawer = ({ open, onOpenChange, expenseId }: UpsertExp
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Banda</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione uma banda" />
@@ -217,7 +217,7 @@ export const UpsertExpenseDrawer = ({ open, onOpenChange, expenseId }: UpsertExp
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />

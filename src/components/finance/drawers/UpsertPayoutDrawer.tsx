@@ -98,7 +98,7 @@ export const UpsertPayoutDrawer = ({ open, onOpenChange, payoutId }: UpsertPayou
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Evento *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || ''}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um evento" />
@@ -122,7 +122,7 @@ export const UpsertPayoutDrawer = ({ open, onOpenChange, payoutId }: UpsertPayou
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Tipo de Beneficiário *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
@@ -202,7 +202,7 @@ export const UpsertPayoutDrawer = ({ open, onOpenChange, payoutId }: UpsertPayou
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
@@ -245,7 +245,7 @@ export const UpsertPayoutDrawer = ({ open, onOpenChange, payoutId }: UpsertPayou
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Método de Pagamento</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Como foi pago" />

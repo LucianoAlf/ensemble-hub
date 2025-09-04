@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSupabaseOptimized } from '@/hooks/useSupabaseOptimized';
 import { useAuth } from '@/contexts/AuthProvider';
 import { EditableField } from './editablefield';
@@ -59,7 +59,7 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
     { value: 'expense', label: 'Despesa', icon: TrendingDown, color: 'text-red-600' },
   ];
 
-  const loadTransactions = React.useCallback(async () => {
+  const loadTransactions = useCallback(async () => {
     if (!user?.id) {
       setTransactions([]);
       setLoading(false);
