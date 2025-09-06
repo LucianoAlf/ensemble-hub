@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useEventModal } from "@/hooks/useEventModal";
+import { useFinancialChartData } from "@/hooks/useFinancialChartData";
 
 import type { EventItem } from "@/pages/Events";
 
@@ -18,6 +19,9 @@ interface DashboardMetrics {
   upcoming_events: number;
   total_members: number;
   monthly_revenue: number;
+  monthly_expenses?: number;
+  monthly_balance?: number;
+  pending_payouts?: number;
 }
 
 interface UpcomingEvent {
@@ -47,14 +51,7 @@ const formatEventDate = (isoString: string): string => {
   });
 };
 
-const chartData: ChartData[] = [
-  { name: 'Jan', receita: 2400, despesas: 1400 },
-  { name: 'Fev', receita: 2210, despesas: 1100 },
-  { name: 'Mar', receita: 3290, despesas: 2000 },
-  { name: 'Abr', receita: 2780, despesas: 1900 },
-  { name: 'Mai', receita: 3890, despesas: 2300 },
-  { name: 'Jun', receita: 4490, despesas: 2400 },
-];
+// Dados do gráfico agora vêm do hook useFinancialChartData (dados reais)
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -76,6 +73,11 @@ const Dashboard = () => {
   const isLoadingRef = useRef(false);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const loadCountRef = useRef(0);
+
+  // Hook para dados reais do gráfico financeiro
+  const { chartData, loading: chartLoading, error: chartError } = useFinancialChartData(
+    user?.user_metadata?.tenant_id || 'd93bd1e5-245e-4a40-9027-4bd669ccc390'
+  );
 
   useSEO({
     title: "Dashboard — LA Music Hub",
@@ -167,13 +169,17 @@ const Dashboard = () => {
         throw new Error('Formato de dados inválido retornado pela função get_dashboard_metrics');
       }
 
-      // Carregar eventos próximos
-       const eventsResult = await supabase
-         .from('evento')
-         .select('id, titulo, inicio, tipo, local')
-         .gte('inicio', new Date().toISOString())
-         .order('inicio', { ascending: true })
-         .limit(4);
+      // Carregar eventos próximos dos próximos 6 meses
+      const sixMonthsFromNow = new Date();
+      sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+      
+      const eventsResult = await supabase
+        .from('evento')
+        .select('id, titulo, inicio, tipo, local')
+        .gte('inicio', new Date().toISOString())
+        .lte('inicio', sixMonthsFromNow.toISOString())
+        .order('inicio', { ascending: true })
+        .limit(10);
       
       if (eventsResult.error) {
         console.error('Events error:', eventsResult.error);
@@ -347,8 +353,17 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="pl-2">
-            <ResponsiveContainer width="100%" height={350}>
-              <AreaChart data={chartData}>
+            {chartLoading ? (
+              <div className="flex items-center justify-center h-[350px]">
+                <div className="text-muted-foreground">Carregando dados financeiros...</div>
+              </div>
+            ) : chartError ? (
+              <div className="flex items-center justify-center h-[350px]">
+                <div className="text-red-500">Erro ao carregar dados: {chartError}</div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={350}>
+                <AreaChart data={chartData}>
                 <XAxis
                   dataKey="name"
                   stroke="#888888"
@@ -386,7 +401,8 @@ const Dashboard = () => {
                   fillOpacity={0.6}
                 />
               </AreaChart>
-            </ResponsiveContainer>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
         <Card className="col-span-3">

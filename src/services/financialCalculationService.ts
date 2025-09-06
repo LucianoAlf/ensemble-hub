@@ -33,9 +33,14 @@ export class FinancialCalculationService {
     const totalExpense = sumTransactions(expenseTransactions);
     const netAmount = totalIncome - totalExpense;
     
-    // Calcular payouts pendentes
+    // Calcular payouts pendentes (incluir na contabilidade)
     const pendingPayouts = payouts
       .filter(p => p.status === 'pending')
+      .reduce((sum, p) => sum + p.amount, 0);
+    
+    // Payouts liquidados devem ser contabilizados como despesas
+    const settledPayouts = payouts
+      .filter(p => p.status === 'settled')
       .reduce((sum, p) => sum + p.amount, 0);
     
     // Calcular métricas mensais (mês atual)
@@ -310,9 +315,29 @@ export class FinancialCalculationService {
   }
 
   /**
+   * Mapeia status do banco para status da aplicação
+   * ATUALIZADO para usar status corretos do banco
+   */
+  private static mapDatabaseStatus(dbStatus: string | null): 'pending' | 'scheduled' | 'settled' {
+    if (!dbStatus) return 'pending';
+    
+    const statusMap: Record<string, 'pending' | 'scheduled' | 'settled'> = {
+      'pending': 'pending',
+      'scheduled': 'scheduled', 
+      'settled': 'settled',
+      // Mapeamentos de compatibilidade
+      'completed': 'settled',
+      'cancelled': 'pending', // Mapear cancelled para pending por enquanto
+      'failed': 'pending'
+    };
+    
+    return statusMap[dbStatus.toLowerCase()] || 'pending';
+  }
+
+  /**
    * Valida e normaliza dados de transação do banco de dados
    */
-  private static validateTransactionData(t: any): any {
+  private static validateTransactionData(t: Database['public']['Tables']['transactions']['Row']): Database['public']['Tables']['transactions']['Row'] {
     if (!t || typeof t !== 'object') {
       throw new Error('Invalid transaction object');
     }
@@ -347,9 +372,8 @@ export class FinancialCalculationService {
       transactionType = 'expense';
     }
     
-    // Validar status
-    const validStatuses = ['pending', 'completed', 'cancelled', 'scheduled', 'settled'];
-    const status = validStatuses.includes(t.status) ? t.status : 'pending';
+    // Validar status usando o mapeamento correto
+    const status = this.mapDatabaseStatus(t.status);
     
     return {
       ...t,
@@ -361,55 +385,67 @@ export class FinancialCalculationService {
   }
 
   /**
-   * Converte transações do formato do banco para o formato padronizado
+   * Converte dados da tabela transactions do banco para o formato padronizado
+   * ATUALIZADO para usar campos corretos do banco
    */
   static convertDatabaseTransactions(dbTransactions: Database['public']['Tables']['transactions']['Row'][]): FinancialTransaction[] {
-    console.log('🔄 [convertDatabaseTransactions] Convertendo transações do banco de dados');
-    console.log('🔄 [convertDatabaseTransactions] Transações originais do banco:', JSON.stringify(dbTransactions, null, 2));
+    console.log('🔄 [convertDatabaseTransactions] Convertendo transações do banco:', dbTransactions.length);
     
     if (!Array.isArray(dbTransactions)) {
       console.warn('convertDatabaseTransactions: Input is not an array:', dbTransactions);
       return [];
     }
 
-    const result = dbTransactions.map(t => {
+    return dbTransactions.map(t => {
       try {
+        // Validar dados antes da conversão
         const validatedTransaction = this.validateTransactionData(t);
         
-        const convertedTransaction = {
+        const converted: FinancialTransaction = {
           id: validatedTransaction.id,
           tenant_id: validatedTransaction.tenant_id,
-          created_at: validatedTransaction.created_at || new Date().toISOString(),
-          updated_at: validatedTransaction.updated_at || undefined,
-          description: validatedTransaction.description || '',
-          amount: validatedTransaction.gross_amount, // Usar gross_amount como valor principal
-          gross_amount: validatedTransaction.gross_amount || undefined,
-          net_amount: validatedTransaction.net_amount || undefined,
+          description: validatedTransaction.description || undefined,
+          gross_amount: this.validateMonetaryValue(validatedTransaction.gross_amount, 'gross_amount'),
+          fee_amount: this.validateMonetaryValue(validatedTransaction.fee_amount, 'fee_amount') || 0,
+          net_amount: this.validateMonetaryValue(validatedTransaction.net_amount, 'net_amount'),
           type: validatedTransaction.type as 'income' | 'expense',
-          category: validatedTransaction.category || undefined,
-          date: validatedTransaction.transaction_date || validatedTransaction.date || new Date().toISOString().split('T')[0],
-          status: validatedTransaction.status as 'pending' | 'completed' | 'cancelled',
-          payment_method: validatedTransaction.payment_method || undefined,
-          notes: validatedTransaction.notes || undefined,
-          tags: validatedTransaction.tags || undefined
+          category: validatedTransaction.category || 'Outros',
+          transaction_date: validatedTransaction.transaction_date || new Date().toISOString().split('T')[0],
+          status: this.mapDatabaseStatus(validatedTransaction.status),
+          counterparty: validatedTransaction.counterparty || undefined,
+          banda_id: validatedTransaction.banda_id || undefined,
+          evento_id: validatedTransaction.evento_id || undefined,
+          settled_at: validatedTransaction.settled_at || undefined,
+          attachment_url: validatedTransaction.attachment_url || undefined,
+          created_at: validatedTransaction.created_at || new Date().toISOString(),
+          updated_at: validatedTransaction.updated_at || new Date().toISOString(),
+          
+          // Campos de compatibilidade (deprecated)
+          amount: this.validateMonetaryValue(validatedTransaction.gross_amount, 'gross_amount'),
+          date: validatedTransaction.transaction_date || new Date().toISOString().split('T')[0],
+          payment_method: validatedTransaction.counterparty || undefined,
+          notes: validatedTransaction.description || undefined
         };
         
-        console.log(`🔄 [convertDatabaseTransactions] Transação ${t.id}: gross_amount=${t.gross_amount}, net_amount=${t.net_amount}, amount_final=${convertedTransaction.amount}`);
-        return convertedTransaction;
+        console.log('✅ [convertDatabaseTransactions] Transação convertida:', {
+          id: converted.id,
+          gross_amount: converted.gross_amount,
+          type: converted.type,
+          status: converted.status
+        });
+        
+        return converted;
       } catch (error) {
-        console.error('Error converting transaction:', error, t);
-        return null;
+        console.error('❌ [convertDatabaseTransactions] Erro ao converter transação:', error, t);
+        throw error;
       }
     }).filter(Boolean) as FinancialTransaction[];
-    
-    console.log('🔄 [convertDatabaseTransactions] Transações convertidas:', JSON.stringify(result, null, 2));
-    return result;
   }
   
   /**
    * Valida e normaliza dados de payout do banco de dados
    */
-  private static validatePayoutData(p: any): any {
+  private static validatePayoutData(p: Database['public']['Tables']['payouts']['Row']): Database['public']['Tables']['payouts']['Row'] {
     if (!p || typeof p !== 'object') {
       throw new Error('Invalid payout object');
     }
@@ -460,15 +496,23 @@ export class FinancialCalculationService {
           created_at: validatedPayout.created_at || new Date().toISOString(),
           updated_at: validatedPayout.updated_at || undefined,
           amount: validatedPayout.amount,
-          description: validatedPayout.description || '',
-          status: validatedPayout.status as 'pending' | 'processing' | 'completed' | 'failed',
-          scheduled_date: validatedPayout.scheduled_date || new Date().toISOString().split('T')[0],
-          processed_date: validatedPayout.processed_date || undefined,
-          recipient: validatedPayout.recipient || undefined,
-          payment_method: validatedPayout.payment_method || undefined,
-          reference_id: validatedPayout.reference_id || undefined,
+          description: validatedPayout.notes || `Cachê - ${validatedPayout.beneficiary_name}`,
+          date: validatedPayout.due_date,
+          processedDate: validatedPayout.settled_at || null,
+          recipient: validatedPayout.beneficiary_name,
+          type: 'payout' as const,
+          reference_id: validatedPayout.evento_id || null,
           notes: validatedPayout.notes || undefined,
-        };
+          evento_id: validatedPayout.evento_id,
+          beneficiary_type: validatedPayout.beneficiary_type,
+          beneficiary_name: validatedPayout.beneficiary_name,
+          due_date: validatedPayout.due_date,
+          status: validatedPayout.status,
+          payment_method: validatedPayout.payment_method || null,
+          settled_at: validatedPayout.settled_at || null,
+          receipt_url: validatedPayout.receipt_url || null,
+          beneficiary_id: validatedPayout.beneficiary_id || null
+        } as FinancialPayout;
       } catch (error) {
         console.error('Error converting payout:', error, p);
         return null;

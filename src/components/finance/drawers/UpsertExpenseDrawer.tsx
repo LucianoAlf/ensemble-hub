@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePickerField } from "@/components/forms/DatePickerField";
 import { TrendingDown, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useEvents, EventSelectOption } from "@/hooks/useEvents";
 
 const expenseSchema = z.object({
   category: z.string().min(1, "Categoria é obrigatória"),
@@ -21,8 +23,7 @@ const expenseSchema = z.object({
   counterparty: z.string().optional(),
   description: z.string().optional(),
   status: z.enum(["pending", "settled"]).default("pending"),
-  settled_at: z.date().optional(),
-  attachment_url: z.string().optional()
+  settled_at: z.date().optional()
 });
 
 type ExpenseFormData = z.infer<typeof expenseSchema>;
@@ -35,16 +36,106 @@ interface UpsertExpenseDrawerProps {
 
 export const UpsertExpenseDrawer = ({ open, onOpenChange, expenseId }: UpsertExpenseDrawerProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [events, setEvents] = useState<EventSelectOption[]>([]);
+  const { getEventsForSelect } = useEvents();
   
   const form = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
       category: "",
-      gross_amount: 0,
       status: "pending",
       transaction_date: new Date()
     }
   });
+
+  // Carregar eventos quando o modal abre
+  useEffect(() => {
+    const loadEvents = async () => {
+      if (open) {
+        try {
+          const eventsData = await getEventsForSelect();
+          setEvents(eventsData);
+        } catch (error) {
+          console.error('Erro ao carregar eventos:', error);
+        }
+      }
+    };
+    loadEvents();
+  }, [open, getEventsForSelect]);
+
+  // Validação inteligente de status baseado na data
+  const watchTransactionDate = form.watch('transaction_date');
+  useEffect(() => {
+    if (watchTransactionDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selectedDate = new Date(watchTransactionDate);
+      selectedDate.setHours(0, 0, 0, 0);
+      
+      // Se a data é passada, sugere 'settled' (liquidado)
+      // Se a data é futura, mantém 'pending'
+      if (selectedDate < today && form.getValues('status') === 'pending') {
+        // Não altera automaticamente, mas poderia mostrar um aviso
+        console.log('💡 Dica: Despesa com data passada geralmente já foi liquidada');
+      }
+    }
+  }, [watchTransactionDate, form]);
+
+  // Carregar dados da transação quando em modo de edição
+  useEffect(() => {
+    const loadTransactionData = async () => {
+      if (!expenseId || !open) return;
+
+      try {
+        console.log('🔄 Carregando dados da despesa:', expenseId);
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('id', expenseId)
+          .eq('tenant_id', 'd93bd1e5-245e-4a40-9027-4bd669ccc390')
+          .single();
+
+        if (error) {
+          console.error('❌ Erro ao carregar despesa:', error);
+          toast.error('Erro ao carregar dados da despesa');
+          return;
+        }
+
+        if (data) {
+          console.log('✅ Dados da despesa carregados:', data);
+          
+          form.reset({
+            category: data.category || '',
+            evento_id: data.evento_id || '',
+            banda_id: data.banda_id || '',
+            transaction_date: new Date(data.transaction_date),
+            gross_amount: data.gross_amount || 0,
+            counterparty: data.counterparty || '',
+            description: data.description || '',
+            status: (data.status as 'pending' | 'settled') || 'pending',
+            settled_at: data.settled_at ? new Date(data.settled_at) : undefined
+          });
+        }
+      } catch (error) {
+        console.error('❌ Erro ao buscar despesa:', error);
+        toast.error('Erro ao carregar dados da despesa');
+      }
+    };
+
+    loadTransactionData();
+  }, [expenseId, open, form]);
+
+  // Reset form apenas para nova transação
+  useEffect(() => {
+    if (open && !expenseId) {
+      form.reset({
+        category: "",
+        gross_amount: 0,
+        status: "pending",
+        transaction_date: new Date()
+      });
+    }
+  }, [open, expenseId, form]);
 
   const categories = [
     "Transporte",
@@ -74,39 +165,41 @@ export const UpsertExpenseDrawer = ({ open, onOpenChange, expenseId }: UpsertExp
   };
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[95vh]">
-        <DrawerHeader>
-          <DrawerTitle className="flex items-center gap-2">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-6">
+          <DialogTitle className="flex items-center gap-2 text-xl font-semibold">
             <TrendingDown className="h-5 w-5 text-red-600" />
-            {expenseId ? "Editar Despesa" : "Nova Despesa"}
-          </DrawerTitle>
-          <DrawerDescription>
-            Registre uma nova despesa no sistema financeiro
-          </DrawerDescription>
-        </DrawerHeader>
+            {expenseId ? 'Editar Despesa' : 'Nova Despesa'}
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            {expenseId ? 'Atualize as informações da despesa.' : 'Registre uma nova despesa no sistema financeiro'}
+          </DialogDescription>
+        </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-6 pb-6">
+            {/* Primeira linha - Categoria, Evento */}
+            <div className="grid gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="category"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Categoria *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione uma categoria" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories.map(category => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="transport">Transporte</SelectItem>
+                        <SelectItem value="equipment">Equipamento</SelectItem>
+                        <SelectItem value="marketing">Marketing</SelectItem>
+                        <SelectItem value="venue">Local</SelectItem>
+                        <SelectItem value="food">Alimentação</SelectItem>
+                        <SelectItem value="other">Outro</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -120,15 +213,19 @@ export const UpsertExpenseDrawer = ({ open, onOpenChange, expenseId }: UpsertExp
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Evento</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione um evento" />
+                          <SelectValue placeholder="Selecione um evento (opcional)" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="evento1">Show do Rock</SelectItem>
-                        <SelectItem value="evento2">Festival de Verão</SelectItem>
+                        <SelectItem value="none">Nenhum evento</SelectItem>
+                        {events.map((event) => (
+                          <SelectItem key={event.id} value={event.id}>
+                            {event.title} - {new Date(event.date).toLocaleDateString('pt-BR')}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -136,23 +233,31 @@ export const UpsertExpenseDrawer = ({ open, onOpenChange, expenseId }: UpsertExp
                 )}
               />
 
+            </div>
+
+            {/* Segunda linha - Valor e Data */}
+            <div className="grid gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
-                name="banda_id"
+                name="gross_amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Banda</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma banda" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="banda1">Banda XYZ</SelectItem>
-                        <SelectItem value="banda2">Rock Stars</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Valor *</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
+                          R$
+                        </span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="1.000,00"
+                          className="pl-10"
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                        />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -163,12 +268,14 @@ export const UpsertExpenseDrawer = ({ open, onOpenChange, expenseId }: UpsertExp
                 name="transaction_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Data *</FormLabel>
                     <DatePickerField
-                      label=""
+                      label="Data *"
                       value={field.value}
                       onChange={field.onChange}
                       placeholder="Selecione a data"
+                      required
+                      allowPastDates={true}
+                      calendarTheme="expense"
                     />
                     <FormMessage />
                   </FormItem>
@@ -176,48 +283,29 @@ export const UpsertExpenseDrawer = ({ open, onOpenChange, expenseId }: UpsertExp
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="gross_amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valor *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Terceira linha - Fornecedor e Status */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="counterparty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fornecedor/Origem</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Loja, Empresa, etc." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="counterparty"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fornecedor/Contraparte</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Quem recebeu o pagamento" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="status"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
@@ -225,32 +313,13 @@ export const UpsertExpenseDrawer = ({ open, onOpenChange, expenseId }: UpsertExp
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="pending">Pendente</SelectItem>
-                        <SelectItem value="settled">Pago</SelectItem>
+                        <SelectItem value="settled">Liquidado</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              {form.watch("status") === "settled" && (
-                <FormField
-                  control={form.control}
-                  name="settled_at"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Data de Pagamento</FormLabel>
-                      <DatePickerField
-                        label=""
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Quando foi pago"
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
             </div>
 
             <FormField
@@ -261,8 +330,9 @@ export const UpsertExpenseDrawer = ({ open, onOpenChange, expenseId }: UpsertExp
                   <FormLabel>Observações</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Descreva a despesa..."
+                      placeholder="Informações adicionais sobre a despesa..."
                       className="resize-none"
+                      rows={3}
                       {...field}
                     />
                   </FormControl>
@@ -271,36 +341,28 @@ export const UpsertExpenseDrawer = ({ open, onOpenChange, expenseId }: UpsertExp
               )}
             />
 
-            <div className="space-y-2">
-              <FormLabel>Anexo</FormLabel>
-              <Button type="button" variant="outline" className="w-full gap-2">
-                <Upload className="h-4 w-4" />
-                Anexar Nota Fiscal/Recibo
+            {/* Botões de ação */}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 gap-3 mt-6 pt-6 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+                disabled={isLoading}
+                className="bg-transparent border-gray-600 text-white hover:bg-gray-700 hover:text-white hover:border-gray-500 transition-colors duration-200"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+                onClick={form.handleSubmit(onSubmit)}
+                className="bg-red-600 hover:bg-red-700 text-white transition-all duration-200 shadow-lg"
+              >
+                {isLoading ? "Salvando..." : (expenseId ? "Atualizar Despesa" : "Criar Despesa")}
               </Button>
             </div>
           </form>
         </Form>
-
-        <DrawerFooter>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              disabled={isLoading}
-              className="flex-1"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={isLoading}
-              className="flex-1"
-            >
-              {isLoading ? "Salvando..." : (expenseId ? "Atualizar" : "Salvar")}
-            </Button>
-          </div>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+      </DialogContent>
+    </Dialog>
   );
 };

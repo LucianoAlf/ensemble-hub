@@ -101,44 +101,42 @@ class RealFinancialService {
   }
 
   /**
-   * Busca pagamentos próximos baseados nas transações
+   * Busca pagamentos próximos baseados nos payouts pendentes
    */
   async getUpcomingPayments(tenantId: string): Promise<UpcomingPayment[]> {
     console.log('💳 realFinancialService.getUpcomingPayments iniciado com tenantId:', tenantId);
     
     try {
-      console.log('💳 Buscando transações de despesa para tenantId:', tenantId);
-      const { data: transactions, error } = await supabase
-        .from('transactions')
-        .select('*')
+      // Buscar payouts pendentes dos próximos 7 dias
+      console.log('💳 Buscando payouts pendentes para tenantId:', tenantId);
+      const sevenDaysFromNow = new Date();
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+      
+      const { data: payouts, error } = await supabase
+        .from('payouts')
+        .select('*, evento:evento_id(titulo)')
         .eq('tenant_id', tenantId)
-        .eq('type', 'expense')
-        .order('transaction_date', { ascending: false })
-        .limit(5);
+        .eq('status', 'pending')
+        .lte('due_date', sevenDaysFromNow.toISOString().split('T')[0])
+        .order('due_date', { ascending: true });
 
-      console.log('💳 Resultado busca pagamentos:', { data: transactions, error });
+      console.log('💳 Resultado busca payouts pendentes:', { data: payouts, error });
       if (error) {
-        console.error('❌ Erro ao buscar pagamentos:', error);
+        console.error('❌ Erro ao buscar payouts:', error);
         throw error;
       }
 
-      if (!transactions) return [];
+      if (!payouts) return [];
 
-      // Converter transações em pagamentos próximos
-      // Em um cenário real, isso viria de uma tabela específica de payouts
-      const upcomingPayments = transactions.map((transaction, index) => {
-        const futureDate = new Date();
-        futureDate.setDate(futureDate.getDate() + (index + 1) * 2); // Espaçar pagamentos
-
-        return {
-          id: transaction.id,
-          beneficiary: transaction.counterparty || `Beneficiário ${index + 1}`,
-          event: transaction.description || 'Evento não especificado',
-          amount: transaction.gross_amount || 0,
-          dueDate: futureDate,
-          type: this.determinePaymentType(transaction.description || '')
-        };
-      });
+      // Converter payouts em pagamentos próximos
+      const upcomingPayments = payouts.map((payout) => ({
+        id: payout.id,
+        beneficiary: payout.beneficiary_name,
+        event: payout.evento?.titulo || 'Evento não especificado',
+        amount: payout.amount,
+        dueDate: new Date(payout.due_date),
+        type: this.determinePaymentType(payout.beneficiary_type)
+      }));
       
       console.log('✅ Pagamentos próximos processados:', upcomingPayments);
       return upcomingPayments;
@@ -223,20 +221,20 @@ class RealFinancialService {
   }
 
   /**
-   * Determina o tipo de pagamento baseado na descrição
+   * Determina o tipo de pagamento baseado no tipo de beneficiário
    */
-  private determinePaymentType(description: string): 'musician' | 'service' | 'venue' {
-    const desc = description.toLowerCase();
+  private determinePaymentType(beneficiaryType: string): 'musician' | 'service' | 'venue' {
+    const type = beneficiaryType.toLowerCase();
     
-    if (desc.includes('músico') || desc.includes('banda') || desc.includes('artista')) {
+    if (type.includes('musician') || type.includes('músico') || type.includes('banda') || type.includes('artista')) {
       return 'musician';
     }
     
-    if (desc.includes('técnico') || desc.includes('som') || desc.includes('luz') || desc.includes('equipamento')) {
+    if (type.includes('crew') || type.includes('técnico') || type.includes('som') || type.includes('luz') || type.includes('equipamento') || type.includes('service')) {
       return 'service';
     }
     
-    if (desc.includes('local') || desc.includes('espaço') || desc.includes('aluguel') || desc.includes('venue')) {
+    if (type.includes('venue') || type.includes('local') || type.includes('espaço') || type.includes('aluguel')) {
       return 'venue';
     }
     

@@ -8,32 +8,61 @@ export interface BaseFinancialRecord {
   updated_at?: string;
 }
 
-// Interface unificada para transações
+// Interface unificada para transações - ALINHADA COM SCHEMA DO BANCO
 export interface FinancialTransaction extends BaseFinancialRecord {
-  description: string;
-  amount: number; // Valor principal da transação (sempre positivo)
-  gross_amount?: number; // Valor bruto (antes de taxas)
-  net_amount?: number; // Valor líquido (após taxas) - GENERATED no banco
+  description?: string; // NULLABLE no banco
+  gross_amount: number; // Campo principal no banco (NOT NULL)
+  fee_amount?: number; // NULLABLE no banco, DEFAULT 0
+  net_amount?: number; // GENERATED no banco (gross_amount - fee_amount)
   type: 'income' | 'expense';
-  category?: string;
-  date: string;
-  status: 'pending' | 'completed' | 'cancelled';
+  category: string; // NOT NULL no banco
+  transaction_date: string; // Campo real no banco (date)
+  status: 'pending' | 'scheduled' | 'settled'; // Valores reais do banco
+  counterparty?: string; // Campo do banco
+  banda_id?: string; // FK para banda
+  evento_id?: string; // FK para evento
+  settled_at?: string; // timestamp no banco
+  attachment_url?: string; // Campo do banco
+  
+  // Campos de compatibilidade (deprecated - usar campos acima)
+  /** @deprecated Use gross_amount instead */
+  amount?: number;
+  /** @deprecated Use transaction_date instead */
+  date?: string;
+  /** @deprecated Use counterparty instead */
   payment_method?: string;
+  /** @deprecated Use description instead */
   notes?: string;
+  /** @deprecated Not supported in current schema */
   tags?: string[];
 }
 
-// Interface unificada para payouts
+// Interface unificada para payouts - ALINHADA COM SCHEMA DO BANCO
 export interface FinancialPayout extends BaseFinancialRecord {
-  amount: number;
-  description: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  scheduled_date: string;
+  amount: number; // NOT NULL no banco
+  evento_id: string; // NOT NULL no banco (FK)
+  transaction_id?: string; // NULLABLE no banco (FK)
+  beneficiary_type: string; // NOT NULL no banco
+  beneficiary_name: string; // NOT NULL no banco
+  beneficiary_id?: string; // NULLABLE no banco
+  due_date: string; // NOT NULL no banco (date)
+  status?: string; // NULLABLE no banco
+  payment_method?: string; // NULLABLE no banco
+  settled_at?: string; // timestamp no banco
+  receipt_url?: string; // Campo do banco
+  notes?: string; // Campo do banco
+  
+  // Campos de compatibilidade (deprecated - usar campos acima)
+  /** @deprecated Use beneficiary_name instead */
+  description?: string;
+  /** @deprecated Use due_date instead */
+  scheduled_date?: string;
+  /** @deprecated Use settled_at instead */
   processed_date?: string;
+  /** @deprecated Use beneficiary_name instead */
   recipient?: string;
-  payment_method?: string;
+  /** @deprecated Not supported in current schema */
   reference_id?: string;
-  notes?: string;
 }
 
 // Interface para registros da tabela financeiro (agregados)
@@ -147,10 +176,14 @@ export interface UpdatePayoutData extends Partial<CreatePayoutData> {
   reference_id?: string;
 }
 
-// Constantes para validação
+// Constantes para validação - ALINHADAS COM SCHEMA DO BANCO
 export const TRANSACTION_TYPES = ['income', 'expense'] as const;
-export const TRANSACTION_STATUSES = ['pending', 'completed', 'cancelled'] as const;
-export const PAYOUT_STATUSES = ['pending', 'processing', 'completed', 'failed'] as const;
+export const TRANSACTION_STATUSES = ['pending', 'scheduled', 'settled'] as const; // Valores reais do banco
+export const PAYOUT_STATUSES = ['pending', 'processing', 'completed', 'failed'] as const; // Manter compatibilidade
+
+// Constantes específicas do banco
+export const DB_TRANSACTION_STATUSES = ['pending', 'scheduled', 'settled'] as const;
+export const LEGACY_TRANSACTION_STATUSES = ['pending', 'completed', 'cancelled'] as const; // Para compatibilidade
 
 export const DEFAULT_CATEGORIES = {
   income: [
@@ -229,17 +262,27 @@ export const calculatePercentage = (value: number, total: number): number => {
 };
 
 export const sumTransactions = (transactions: FinancialTransaction[]): number => {
-  console.log('➕ [sumTransactions] Iniciando soma de transações');
-  console.log('➕ [sumTransactions] Número de transações:', transactions.length);
-  console.log('➕ [sumTransactions] Transações para somar:', JSON.stringify(transactions, null, 2));
-  
-  const result = transactions.reduce((sum, transaction) => {
-    console.log(`➕ [sumTransactions] Somando transação ${transaction.id}: ${transaction.amount} (soma atual: ${sum})`);
-    return sum + transaction.amount;
+  return transactions.reduce((sum, transaction) => {
+    // Usar net_amount se disponível, senão usar gross_amount, senão amount (compatibilidade)
+    const amount = transaction.net_amount ?? transaction.gross_amount ?? transaction.amount ?? 0;
+    return sum + amount;
   }, 0);
-  
-  console.log('➕ [sumTransactions] Resultado final da soma:', result);
-  return result;
+};
+
+// Função específica para somar valores brutos
+export const sumGrossTransactions = (transactions: FinancialTransaction[]): number => {
+  return transactions.reduce((sum, transaction) => {
+    const amount = transaction.gross_amount ?? transaction.amount ?? 0;
+    return sum + amount;
+  }, 0);
+};
+
+// Função específica para somar valores líquidos
+export const sumNetTransactions = (transactions: FinancialTransaction[]): number => {
+  return transactions.reduce((sum, transaction) => {
+    const amount = transaction.net_amount ?? transaction.gross_amount ?? transaction.amount ?? 0;
+    return sum + amount;
+  }, 0);
 };
 
 export const filterTransactionsByType = (

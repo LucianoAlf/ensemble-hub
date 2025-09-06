@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSupabaseOptimized } from '@/hooks/useSupabaseOptimized';
 import { useAuth } from '@/contexts/AuthProvider';
-import { EditableField } from './editablefield';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,7 +8,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, TrendingUp, TrendingDown, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { MoreHorizontal, TrendingUp, TrendingDown, Clock, CheckCircle, AlertCircle, Eye, Edit, Trash2, Users } from 'lucide-react';
 
 import { Database } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
@@ -25,11 +25,15 @@ interface EnhancedTransactionsTableProps {
     status?: string;
   };
   onTransactionUpdate?: (transaction: Transaction) => void;
+  onTransactionEdit?: (transaction: Transaction) => void;
+  onTransactionDelete?: (transactionId: string) => void;
 }
 
 export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps> = ({
   filters = {},
   onTransactionUpdate,
+  onTransactionEdit,
+  onTransactionDelete,
 }) => {
   const { client: supabase } = useSupabaseOptimized();
   const { user } = useAuth();
@@ -38,6 +42,7 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
   const [error, setError] = useState<string | null>(null);
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
   const categoryOptions = [
     { value: 'show', label: 'Show' },
@@ -54,14 +59,33 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
     { value: 'settled', label: 'Liquidado', icon: CheckCircle, color: 'text-green-600' },
   ];
 
+  // Função para formatar valores monetários
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  // Função para obter valor principal da transação
+  const getTransactionAmount = (transaction: Transaction) => {
+    // Usar net_amount se disponível, senão gross_amount
+    return transaction.net_amount ?? transaction.gross_amount ?? 0;
+  };
+
+  // Função para formatar data
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
   const typeOptions = [
     { value: 'income', label: 'Receita', icon: TrendingUp, color: 'text-green-600' },
     { value: 'expense', label: 'Despesa', icon: TrendingDown, color: 'text-red-600' },
+    { value: 'payout', label: 'Cachê', icon: Users, color: 'text-blue-600' },
   ];
 
-  const loadTransactions = useCallback(async () => {
-    if (!user?.id) {
-      setTransactions([]);
+  const fetchTransactions = useCallback(async () => {
+    if (!user) {
       setLoading(false);
       return;
     }
@@ -70,50 +94,92 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
       setLoading(true);
       setError(null);
 
-      let query = supabase
+      // Buscar transações da tabela transactions
+      let transactionsQuery = supabase
         .from('transactions')
         .select('*, banda:banda_id(nome), evento:evento_id(titulo)')
-        .eq('tenant_id', user.id);
+        .eq('tenant_id', 'd93bd1e5-245e-4a40-9027-4bd669ccc390');
 
+      // Buscar cachês da tabela payouts
+      let payoutsQuery = supabase
+        .from('payouts')
+        .select('*, evento:evento_id(titulo)')
+        .eq('tenant_id', 'd93bd1e5-245e-4a40-9027-4bd669ccc390');
+
+      // Aplicar filtros
       if (filters.dateRange?.from && filters.dateRange?.to) {
-        query = query
+        transactionsQuery = transactionsQuery
           .gte('transaction_date', filters.dateRange.from.toISOString())
           .lte('transaction_date', filters.dateRange.to.toISOString());
+        payoutsQuery = payoutsQuery
+          .gte('due_date', filters.dateRange.from.toISOString())
+          .lte('due_date', filters.dateRange.to.toISOString());
       }
 
       if (filters.bandaId) {
-        query = query.eq('banda_id', filters.bandaId);
+        transactionsQuery = transactionsQuery.eq('banda_id', filters.bandaId);
       }
 
       if (filters.eventoId) {
-        query = query.eq('evento_id', filters.eventoId);
+        transactionsQuery = transactionsQuery.eq('evento_id', filters.eventoId);
+        payoutsQuery = payoutsQuery.eq('evento_id', filters.eventoId);
       }
 
       if (filters.category) {
-        query = query.eq('category', filters.category);
+        transactionsQuery = transactionsQuery.eq('category', filters.category);
       }
 
       if (filters.status) {
-        query = query.eq('status', filters.status);
+        transactionsQuery = transactionsQuery.eq('status', filters.status);
+        payoutsQuery = payoutsQuery.eq('status', filters.status);
       }
 
-      const { data, error } = await query.order('transaction_date', { ascending: false });
+      // Executar ambas as queries
+      const [transactionsResult, payoutsResult] = await Promise.all([
+        transactionsQuery.order('created_at', { ascending: false }),
+        payoutsQuery.order('created_at', { ascending: false })
+      ]);
 
-      if (error) {
-        console.error('Supabase query error:', error);
-        throw error;
+      if (transactionsResult.error) {
+        console.error('Erro ao buscar transações:', transactionsResult.error);
+        setError('Erro ao carregar transações');
+        return;
       }
 
-      // Validate and sanitize data
-      const validatedData = (data || []).map(transaction => ({
-        ...transaction,
-        banda_nome: transaction.banda?.nome || 'Banda não especificada',
-        evento_titulo: transaction.evento?.titulo || 'Evento não especificado',
-        gross_amount: Number(transaction.gross_amount) || 0,
-        transaction_date: transaction.transaction_date || new Date().toISOString(),
+      if (payoutsResult.error) {
+        console.error('Erro ao buscar cachês:', payoutsResult.error);
+        setError('Erro ao carregar cachês');
+        return;
+      }
+
+      // Converter payouts para formato de transação
+      const payoutsAsTransactions = (payoutsResult.data || []).map(payout => ({
+        id: payout.id,
+        tenant_id: payout.tenant_id,
+        type: 'payout' as const,
+        category: 'Cachê',
+        description: `Pagamento ${payout.beneficiary_name}`,
+        banda_id: null,
+        evento_id: payout.evento_id,
+        counterparty: payout.beneficiary_name,
+        gross_amount: payout.amount,
+        fee_amount: 0,
+        net_amount: payout.amount,
+        status: payout.status,
+        transaction_date: payout.due_date,
+        settled_at: payout.settled_at,
+        attachment_url: payout.receipt_url,
+        created_at: payout.created_at,
+        updated_at: payout.updated_at,
+        banda: null,
+        evento: payout.evento
       }));
 
-      setTransactions(validatedData);
+      // Combinar e ordenar por data de criação
+      const allTransactions = [...(transactionsResult.data || []), ...payoutsAsTransactions]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setTransactions(allTransactions);
     } catch (err) {
       console.error('Error loading transactions:', err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar transações');
@@ -124,12 +190,10 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
   }, [filters, supabase, user?.id]);
 
   useEffect(() => {
-    if (user?.id) {
-      loadTransactions();
-    }
-  }, [user?.id, filters, loadTransactions]);
+    fetchTransactions();
+  }, [fetchTransactions]);
 
-  useEffect(() => {
+  const handleTransactionUpdate = useCallback(async (transactionId: string, field: string, value: any) => {
     if (!user?.id) return;
     
     let isSubscribed = true;
@@ -142,7 +206,7 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
           event: '*',
           schema: 'public',
           table: 'transactions',
-          filter: `tenant_id=eq.${user.id}`,
+          filter: `tenant_id=eq.d93bd1e5-245e-4a40-9027-4bd669ccc390`,
         },
         (payload) => {
           if (!isSubscribed) return;
@@ -212,6 +276,29 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
     }
   };
 
+  const handleDeleteTransaction = async (transactionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', transactionId)
+        .eq('tenant_id', 'd93bd1e5-245e-4a40-9027-4bd669ccc390');
+
+      if (error) throw error;
+
+      setTransactions(prev => prev.filter(t => t.id !== transactionId));
+      setShowDeleteConfirm(null);
+      onTransactionDelete?.(transactionId);
+      
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error deleting transaction:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao excluir transação');
+      setShowDeleteConfirm(null);
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -246,7 +333,7 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-          <Button onClick={loadTransactions} className="mt-4">
+          <Button onClick={fetchTransactions} className="mt-4">
             Tentar Novamente
           </Button>
         </CardContent>
@@ -286,24 +373,25 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
           )}
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="max-h-[500px] overflow-y-auto overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-2">
+                  <th className="text-left pl-4 pr-2 py-2">
                     <Checkbox
                       checked={selectedTransactions.size === transactions.length && transactions.length > 0}
                       onCheckedChange={(checked) => handleSelectAll(Boolean(checked))}
                       aria-label="Selecionar todas as transações"
+                      className="border-gray-300 data-[state=checked]:bg-white data-[state=checked]:border-gray-400 data-[state=checked]:text-gray-800"
                     />
                   </th>
-                  <th className="text-left p-2 text-sm font-medium">Data</th>
-                  <th className="text-left p-2 text-sm font-medium">Descrição</th>
-                  <th className="text-left p-2 text-sm font-medium">Categoria</th>
-                  <th className="text-left p-2 text-sm font-medium">Tipo</th>
-                  <th className="text-right p-2 text-sm font-medium">Valor</th>
-                  <th className="text-left p-2 text-sm font-medium">Status</th>
-                  <th className="text-left p-2 text-sm font-medium">Ações</th>
+                  <th className="text-left pl-4 pr-2 py-2 text-sm font-medium">Data</th>
+                  <th className="text-left pl-4 pr-2 py-2 text-sm font-medium">Descrição</th>
+                  <th className="text-left pl-4 pr-2 py-2 text-sm font-medium">Categoria</th>
+                  <th className="text-left pl-4 pr-2 py-2 text-sm font-medium">Tipo</th>
+                  <th className="text-left pl-4 pr-2 py-2 text-sm font-medium">Valor</th>
+                  <th className="text-left pl-4 pr-2 py-2 text-sm font-medium">Status</th>
+                  <th className="text-left pl-4 pr-2 py-2 text-sm font-medium">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -312,89 +400,81 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
                   const statusOption = statusOptions.find(opt => opt.value === transaction.status);
 
                   return (
-                    <tr key={transaction.id} className="border-b hover:bg-gray-50">
+                    <tr key={transaction.id} className={cn(
+                      "border-b transition-colors duration-200",
+                      transaction.type === 'income' && "hover:bg-green-500/20",
+                      transaction.type === 'expense' && "hover:bg-red-500/20",
+                      transaction.type === 'payout' && "hover:bg-blue-500/20"
+                    )}>
                       <td className="p-2">
                         <Checkbox
                           checked={selectedTransactions.has(transaction.id)}
                           onCheckedChange={(checked) => handleSelectTransaction(transaction.id, checked as boolean)}
                           aria-label={`Selecionar transação ${transaction.description}`}
+                          className="border-gray-300 data-[state=checked]:bg-white data-[state=checked]:border-gray-400 data-[state=checked]:text-gray-800"
                         />
                       </td>
                       <td className="p-2">
-                        <EditableField
-                          id={transaction.id}
-                          field="transaction_date"
-                          value={transaction.transaction_date}
-                          type="date"
-                          table="transactions"
-                          className="w-32"
-                        />
+                        <span className="text-sm">{formatDate(transaction.transaction_date)}</span>
                       </td>
                       <td className="p-2">
-                        <EditableField
-                          id={transaction.id}
-                          field="description"
-                          value={transaction.description}
-                          type="text"
-                          table="transactions"
-                          className="w-48"
-                          placeholder="Descrição da transação"
-                        />
+                        <span className="text-sm">{transaction.description || 'Sem descrição'}</span>
                       </td>
                       <td className="p-2">
-                        <EditableField
-                          id={transaction.id}
-                          field="category"
-                          value={transaction.category}
-                          type="select"
-                          table="transactions"
-                          className="w-32"
-                          options={categoryOptions}
-                        />
+                        <span className="text-sm">{transaction.category}</span>
                       </td>
                       <td className="p-2">
                         <Badge
-                          variant={transaction.type === 'income' ? 'default' : 'destructive'}
+                          variant={transaction.type === 'income' ? 'default' : transaction.type === 'payout' ? 'default' : 'destructive'}
                           className={cn(
-                            typeOption?.color,
-                            "text-xs"
+                            transaction.type === 'income' 
+                              ? "bg-green-600 text-white border-green-600 hover:bg-green-700" 
+                              : transaction.type === 'payout'
+                              ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                              : "bg-red-600 text-white border-red-600 hover:bg-red-700",
+                            "text-xs font-medium"
                           )}
                         >
                           {typeOption?.icon && <typeOption.icon className="h-3 w-3 mr-1" />}
                           {typeOption?.label}
                         </Badge>
                       </td>
-                      <td className="p-2 text-right">
-                        <EditableField
-                          id={transaction.id}
-                          field="gross_amount"
-                          value={transaction.gross_amount}
-                          type="currency"
-                          table="transactions"
-                          className="w-24"
-                        />
+                      <td className="p-2">
+                        <span className="text-sm font-medium">{formatCurrency(transaction.gross_amount)}</span>
                       </td>
                       <td className="p-2">
-                        <EditableField
-                          id={transaction.id}
-                          field="status"
-                          value={transaction.status}
-                          type="select"
-                          table="transactions"
-                          className="w-32"
-                          options={statusOptions}
-                        />
+                        <span className="text-sm">
+                          {statusOptions.find(opt => opt.value === transaction.status)?.label}
+                        </span>
                       </td>
-                      <td className="p-2">
+                      <td className="pl-4 pr-2 py-2">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                               <MoreHorizontal className="h-3 w-3" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem onClick={() => onTransactionUpdate?.(transaction)}>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={() => onTransactionUpdate?.(transaction)}
+                              className="flex items-center gap-2"
+                            >
+                              <Eye className="h-4 w-4" />
                               Ver Detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => onTransactionEdit?.(transaction)}
+                              className="flex items-center gap-2"
+                            >
+                              <Edit className="h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => setShowDeleteConfirm(transaction.id)}
+                              className="flex items-center gap-2 text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Excluir
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -413,6 +493,33 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Dialog open={!!showDeleteConfirm} onOpenChange={() => setShowDeleteConfirm(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteConfirm(null)}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => showDeleteConfirm && handleDeleteTransaction(showDeleteConfirm)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

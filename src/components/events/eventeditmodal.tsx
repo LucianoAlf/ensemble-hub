@@ -106,34 +106,84 @@ export function EventEditModal({
     setError(null);
 
     try {
-      // Simular carregamento de dados
-      const mockData: EventData = {
-        id: eventId,
-        titulo: 'Evento de Teste',
-        tipo: 'evento',
-        inicio: new Date().toISOString(),
-        fim: new Date(Date.now() + 3600000).toISOString(),
-        local: 'Local de Teste',
-        endereco: 'Endereço de Teste',
-        orcamento: 1000,
-        descricao: 'Descrição de teste',
-        bandas: []
+      // Buscar dados reais do evento no banco
+      const { data: evento, error: eventoError } = await supabase
+        .from('evento')
+        .select(`
+          id,
+          titulo,
+          tipo,
+          inicio,
+          fim,
+          local,
+          endereco,
+          orcamento,
+          descricao
+        `)
+        .eq('id', eventId)
+        .single();
+
+      if (eventoError) {
+        throw new Error(`Erro ao buscar evento: ${eventoError.message}`);
+      }
+
+      if (!evento) {
+        throw new Error('Evento não encontrado');
+      }
+
+      // Buscar bandas associadas ao evento
+      const { data: eventoBandas, error: bandasError } = await supabase
+        .from('evento_banda')
+        .select(`
+          banda_id,
+          banda!fk_evento_banda_banda (
+            id,
+            nome,
+            genero
+          )
+        `)
+        .eq('evento_id', eventId);
+
+      if (bandasError) {
+        console.warn('Erro ao buscar bandas do evento:', bandasError);
+      }
+
+      // Processar bandas corretamente
+      const bandas: Band[] = eventoBandas?.map(eb => ({
+        id: (eb.banda as any).id,
+        nome: (eb.banda as any).nome,
+        genero: (eb.banda as any).genero
+      })) || [];
+
+      console.log('Bandas carregadas do banco:', bandas);
+
+      const eventData: EventData = {
+        id: evento.id,
+        titulo: evento.titulo,
+        tipo: evento.tipo as 'evento' | 'ensaio' | 'aula',
+        inicio: evento.inicio,
+        fim: evento.fim,
+        local: evento.local,
+        endereco: evento.endereco,
+        orcamento: evento.orcamento ? Number(evento.orcamento) : undefined,
+        descricao: evento.descricao,
+        bandas: bandas
       };
 
-      setEventData(mockData);
+      setEventData(eventData);
       setFormData({
-        titulo: mockData.titulo,
-        tipo: mockData.tipo,
-        inicio: mockData.inicio,
-        fim: mockData.fim || '',
-        local: mockData.local,
-        endereco: mockData.endereco || '',
-        orcamento: mockData.orcamento?.toString() || '',
-        descricao: mockData.descricao || '',
-        bandas: mockData.bandas
+        titulo: eventData.titulo,
+        tipo: eventData.tipo,
+        inicio: eventData.inicio,
+        fim: eventData.fim || '',
+        local: eventData.local,
+        endereco: eventData.endereco || '',
+        orcamento: eventData.orcamento?.toString() || '',
+        descricao: eventData.descricao || '',
+        bandas: eventData.bandas
       });
     } catch (err) {
-      setError('Erro ao carregar dados do evento');
+      setError(err instanceof Error ? err.message : 'Erro ao carregar dados do evento');
       console.error('Erro ao carregar evento:', err);
     } finally {
       setIsLoadingData(false);
@@ -155,8 +205,38 @@ export function EventEditModal({
     setError(null);
 
     try {
-      // Simular salvamento
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Validar campos obrigatórios
+      if (!formData.titulo || !formData.inicio || !formData.local) {
+        throw new Error('Preencha todos os campos obrigatórios');
+      }
+
+      // Preparar dados para salvamento
+      const updateData = {
+        p_evento_id: eventId,
+        p_titulo: formData.titulo,
+        p_tipo: formData.tipo,
+        p_inicio: formData.inicio,
+        p_local: formData.local,
+        p_fim: formData.fim || null,
+        p_endereco: formData.endereco || null,
+        p_orcamento: formData.orcamento ? parseFloat(formData.orcamento) : null,
+        p_observacoes: formData.descricao || null,
+        p_banda_ids: formData.bandas.map(banda => banda.id)
+      };
+
+      console.log('Salvando evento com dados:', updateData);
+      console.log('Bandas sendo enviadas:', updateData.p_banda_ids);
+      console.log('FormData.bandas completo:', formData.bandas);
+
+      // Chamar função do backend
+      const { data, error } = await supabase.rpc('update_evento_full', updateData);
+
+      if (error) {
+        console.error('Erro do Supabase:', error);
+        throw error;
+      }
+
+      console.log('Evento salvo com sucesso:', data);
       
       toast({
         title: "Sucesso",
@@ -165,13 +245,20 @@ export function EventEditModal({
 
       onEventUpdated?.(eventId);
       onOpenChange(false);
-    } catch (err) {
-      setError('Erro ao salvar evento');
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Erro ao salvar evento';
+      setError(errorMessage);
       console.error('Erro ao salvar evento:', err);
+      
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive"
+      });
     } finally {
       setIsSaving(false);
     }
-  }, [eventData, eventId, onEventUpdated, onOpenChange, toast]);
+  }, [eventData, eventId, formData, onEventUpdated, onOpenChange, toast, supabase]);
 
   // Função para retry
   const handleRetry = useCallback(() => {

@@ -15,6 +15,8 @@ interface DatePickerFieldProps {
   placeholder?: string;
   disabled?: boolean;
   required?: boolean;
+  allowPastDates?: boolean;
+  calendarTheme?: 'income' | 'expense' | 'payout';
 }
 
 export function DatePickerField({
@@ -24,6 +26,8 @@ export function DatePickerField({
   placeholder = "Selecione uma data",
   disabled = false,
   required = false,
+  allowPastDates = false,
+  calendarTheme = 'income',
 }: DatePickerFieldProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -62,10 +66,35 @@ export function DatePickerField({
             mode="single"
             selected={value}
             onSelect={handleDateSelect}
-            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+            disabled={allowPastDates ? undefined : (date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
             initialFocus
             className="pointer-events-auto"
             locale={ptBR}
+            classNames={{
+              months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+              month: "space-y-4",
+              caption: "flex justify-center pt-1 relative items-center",
+              caption_label: "text-sm font-medium text-white",
+              nav: "space-x-1 flex items-center",
+              nav_button: "h-7 w-7 bg-transparent p-0 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md transition-colors",
+              nav_button_previous: "absolute left-1",
+              nav_button_next: "absolute right-1",
+              table: "w-full border-collapse space-y-1",
+              head_row: "flex",
+              head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
+              row: "flex w-full mt-2",
+              cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+              day: "h-9 w-9 p-0 font-normal text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors duration-200 focus:bg-gray-700 focus:text-white",
+              day_selected: calendarTheme === 'income' 
+                ? "bg-green-600 text-white hover:bg-green-700 hover:text-white focus:bg-green-700 focus:text-white shadow-md"
+                : calendarTheme === 'expense'
+                ? "bg-red-600 text-white hover:bg-red-700 hover:text-white focus:bg-red-700 focus:text-white shadow-md"
+                : "bg-blue-600 text-white hover:bg-blue-700 hover:text-white focus:bg-blue-700 focus:text-white shadow-md",
+              day_today: "bg-gray-600 text-white font-medium border border-gray-400 ring-2 ring-white/20",
+              day_outside: "text-gray-600 opacity-50",
+              day_disabled: "text-gray-600 opacity-30 cursor-not-allowed hover:bg-transparent hover:text-gray-600",
+              day_hidden: "invisible",
+            }}
           />
         </PopoverContent>
       </Popover>

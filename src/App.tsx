@@ -13,6 +13,7 @@ import Auth from "./pages/Auth";
 import Financeiro from "./pages/Financeiro";
 import { AuthProvider } from "@/contexts/AuthProvider";
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
+import { TestHooks } from "@/components/TestHooks";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Financeiro />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/test-hooks"
+              element={
+                <ProtectedRoute>
+                  <TestHooks />
                 </ProtectedRoute>
               }
             />
