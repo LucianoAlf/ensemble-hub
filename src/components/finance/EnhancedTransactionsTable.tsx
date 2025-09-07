@@ -278,13 +278,26 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
 
   const handleDeleteTransaction = async (transactionId: string) => {
     try {
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', transactionId)
-        .eq('tenant_id', 'd93bd1e5-245e-4a40-9027-4bd669ccc390');
-
-      if (error) throw error;
+      // Encontrar a transação para verificar se é um payout
+      const transactionToDelete = transactions.find(t => t.id === transactionId);
+      
+      if (transactionToDelete?.type === 'payout') {
+        // Se for um payout, deletar da tabela payouts
+        const { error } = await supabase
+          .from('payouts')
+          .delete()
+          .eq('id', transactionId);
+          
+        if (error) throw error;
+      } else {
+        // Se for uma transação normal, deletar da tabela transactions
+        const { error } = await supabase
+          .from('transactions')
+          .delete()
+          .eq('id', transactionId);
+          
+        if (error) throw error;
+      }
 
       setTransactions(prev => prev.filter(t => t.id !== transactionId));
       setShowDeleteConfirm(null);
