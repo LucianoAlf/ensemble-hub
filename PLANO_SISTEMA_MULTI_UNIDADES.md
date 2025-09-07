@@ -75,31 +75,50 @@ CREATE INDEX IF NOT EXISTS idx_banda_categoria ON public.banda(categoria);
 - Filtros por categoria na listagem de bandas
 - Busca combinada (unidade + categoria)
 
-### **FASE 4: Dashboard - Métricas Visuais**
+### **FASE 4: Dashboard - Layout Otimizado**
 
-#### 4.1 **Cards de Métricas**
+#### 4.1 **Cards Essenciais (5 cards únicos)**
+
+**Linha Principal (5 cards sem redundâncias):**
 ```
-┌─────────────────┬─────────────────┬─────────────────┐
-│   Campo Grande  │     Recreio     │      Barra      │
-│   🎵 12 bandas  │   🎵 8 bandas   │   🎵 15 bandas  │
-└─────────────────┴─────────────────┴─────────────────┘
-
-┌─────────────────┬─────────────────┬─────────────────┐
-│      Kids       │      Teen       │     Adulto      │
-│   👶 8 bandas   │   🧑 12 bandas  │   👨 15 bandas  │
-└─────────────────┴─────────────────┴─────────────────┘
+┌─────────────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┐
+│   Bandas Ativas │ Próximos Eventos│  Total Membros  │  Receita Mensal │ Despesa Mensal  │
+│   🎵 35 bandas  │   📅 12 eventos │   👥 180 pessoas│   💰 R$ 15.500  │   💸 R$ 8.200   │
+└─────────────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘
 ```
 
-#### 4.2 **Gráficos Não-Redundantes**
-- **Gráfico de Pizza**: Distribuição por Unidade
-- **Gráfico de Barras**: Categorias por Unidade (matriz)
-- **Gráfico de Linha**: Evolução de bandas por mês (segmentado)
+#### 4.2 **Gráficos Visuais (substituem cards excessivos)**
+
+**Métricas por Unidade - Gráfico de Pizza:**
+```
+┌─────────────────────────────────────────────────────────┐
+│                 Distribuição por Unidade                │
+│                                                         │
+│    🟢 Campo Grande (40%)    🔵 Recreio (25%)           │
+│    🟡 Barra (35%)                                       │
+│                                                         │
+│    📊 Gráfico interativo com tooltips                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Métricas por Categoria - Gráfico de Barras:**
+```
+┌─────────────────────────────────────────────────────────┐
+│              Bandas por Categoria e Unidade             │
+│                                                         │
+│  Kids   ████████ (8)                                   │
+│  Teen   ████████████ (12)                              │
+│  Adulto ███████████████ (15)                           │
+│                                                         │
+│    📊 Barras segmentadas por unidade                    │
+└─────────────────────────────────────────────────────────┘
+```
 
 #### 4.3 **Componentes Dashboard**
-- `UnidadeMetricsCard`: Métricas por unidade
-- `CategoriaMetricsCard`: Métricas por categoria
-- `BandaDistributionChart`: Gráfico de distribuição
-- `BandaEvolutionChart`: Evolução temporal
+- `FinancialMetricsCard`: Card Despesa Mensal (Receita já existe)
+- `UnidadeDistributionChart`: Gráfico de pizza por unidade
+- `CategoriaBarChart`: Gráfico de barras por categoria
+- `FinancialChart`: Gráfico Receitas vs Despesas (mantido do dashboard atual)
 
 ### **FASE 5: Compatibilidade e Migração**
 
@@ -198,12 +217,13 @@ CREATE TABLE public.unidade (
 - [ ] Testes de formulários
 
 ### **Frontend - Dashboard**
-- [ ] Criar `UnidadeMetricsCard`
-- [ ] Criar `CategoriaMetricsCard`
-- [ ] Implementar gráfico de distribuição por unidade
-- [ ] Implementar gráfico de categorias por unidade
-- [ ] Implementar gráfico de evolução temporal
-- [ ] Integrar com dados reais do Supabase
+- [ ] **Manter cards existentes**: Bandas Ativas, Próximos Eventos, Total Membros, Receita Mensal
+- [ ] **Adicionar novo card**: Despesa Mensal (único card novo)
+- [ ] **Manter gráfico existente**: Receitas vs Despesas
+- [ ] Implementar `UnidadeDistributionChart`: Gráfico de pizza por unidade
+- [ ] Implementar `CategoriaBarChart`: Gráfico de barras por categoria
+- [ ] Integrar gráficos com dados reais do Supabase
+- [ ] **Garantir integração completa** com módulo financeiro existente
 
 ### **Testes e Validação**
 - [ ] Testes unitários dos novos componentes

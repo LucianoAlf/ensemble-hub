@@ -2,10 +2,12 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSEO } from "@/hooks/useSEO";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, DollarSign, Music2, Users, TrendingUp, AlertTriangle } from "lucide-react";
+import { CalendarDays, DollarSign, Music2, Users, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { CreateEventDialog } from "@/components/events/CreateEventDialog";
 import { EventEditModal } from "@/components/events/EventEditModal";
+import { UnidadeDistributionChart } from "@/components/dashboard/UnidadeDistributionChart";
+import { CategoriaBarChart } from "@/components/dashboard/CategoriaBarChart";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -280,7 +282,8 @@ const Dashboard = () => {
     activeBands: (dashboardMetrics.active_bands || 0).toString(),
     upcomingEvents: (dashboardMetrics.upcoming_events || 0).toString(),
     totalMembers: (dashboardMetrics.total_members || 0).toString(),
-    monthlyRevenue: `R$ ${(dashboardMetrics.monthly_revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+    monthlyRevenue: `R$ ${(dashboardMetrics.monthly_revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+    monthlyExpense: `R$ ${(dashboardMetrics.monthly_expenses || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
   }), [dashboardMetrics]);
 
   return (
@@ -317,7 +320,7 @@ const Dashboard = () => {
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         <StatCard
           title="Bandas Ativas"
           value={formattedMetrics.activeBands}
@@ -340,6 +343,12 @@ const Dashboard = () => {
           title="Receita Mensal"
           value={formattedMetrics.monthlyRevenue}
           icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Despesa Mensal"
+          value={formattedMetrics.monthlyExpense}
+          icon={<TrendingDown className="h-4 w-4 text-muted-foreground" />}
           isLoading={isLoading}
         />
       </div>
@@ -454,6 +463,12 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Gráficos de Métricas por Unidade e Categoria */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <UnidadeDistributionChart isLoading={isLoading} />
+        <CategoriaBarChart isLoading={isLoading} />
       </div>
 
       {selectedEventId && (
