@@ -367,17 +367,17 @@ export default function Events() {
         ) : (
           <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filtered.map((event) => (
-              <Card key={event.id} className="hover:shadow-lg transition-shadow">
+              <Card key={event.id} className="group cursor-pointer transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary/20 active:scale-[0.98]">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
                         <Calendar className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-lg">{event.name}</CardTitle>
+                        <CardTitle className="text-lg transition-colors duration-300 group-hover:text-primary">{event.name}</CardTitle>
                         <div className="mt-1 flex items-center gap-2">
-                          <Badge variant="secondary">{labelForType(event.type)}</Badge>
+                          <Badge variant="secondary" className="transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground">{labelForType(event.type)}</Badge>
                           {event.bandName && (
                             <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                               <Users className="h-3 w-3" /> {event.bandName}

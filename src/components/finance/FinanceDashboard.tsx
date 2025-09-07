@@ -173,15 +173,17 @@ const FinanceDashboard = () => {
       {/* KPIs Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {kpis.map((kpi, index) => (
-          <Card key={index} className="hover:shadow-md transition-shadow">
+          <Card key={index} className="group cursor-pointer transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary/20 active:scale-[0.98]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-sm font-medium text-muted-foreground transition-colors duration-300 group-hover:text-primary">
                 {kpi.title}
               </CardTitle>
-              <kpi.icon className="h-4 w-4 text-muted-foreground" />
+              <div className="transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+                <kpi.icon className="h-4 w-4 text-muted-foreground" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold mb-1">{kpi.value}</div>
+              <div className="text-2xl font-bold mb-1 transition-colors duration-300 group-hover:text-primary">{kpi.value}</div>
               <div className={`flex items-center gap-1 text-xs ${getTrendColor(kpi.trend)}`}>
                 {getTrendIcon(kpi.trend)}
                 <span>{kpi.change}</span>
@@ -212,7 +214,7 @@ const FinanceDashboard = () => {
             ) : (
               <div className="space-y-3">
                 {upcomingPayments.map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
                     <div className="flex items-center gap-3">
                       <Users className="h-4 w-4 text-muted-foreground" />
                       <div>
@@ -250,7 +252,7 @@ const FinanceDashboard = () => {
             ) : (
               <div className="space-y-3">
                 {recentEvents.map((event) => (
-                  <div key={event.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div key={event.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
                     <div className="flex items-center gap-3">
                       <TrendingUp className="h-4 w-4 text-muted-foreground" />
                       <div>

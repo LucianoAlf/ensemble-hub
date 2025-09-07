@@ -13,24 +13,6 @@ export function UnidadeDistributionChart({
   const { unidadeChartData, isLoading: metricsLoading } = useBandaMetrics();
   const isLoading = externalLoading || metricsLoading;
 
-  // Verificar se os dados estão disponíveis
-  if (!unidadeChartData || unidadeChartData.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Distribuição por Unidade
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-[300px]">
-            <div className="text-muted-foreground">Nenhum dado disponível</div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -73,6 +55,25 @@ export function UnidadeDistributionChart({
       </text>
     );
   };
+
+  // Verificar se os dados estão disponíveis
+  if (!unidadeChartData || unidadeChartData.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Distribuição por Unidade
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-[400px]">
+            <div className="text-muted-foreground">Nenhum dado disponível</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

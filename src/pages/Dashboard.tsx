@@ -8,11 +8,13 @@ import { CreateEventDialog } from "@/components/events/CreateEventDialog";
 import { EventEditModal } from "@/components/events/EventEditModal";
 import { UnidadeDistributionChart } from "@/components/dashboard/UnidadeDistributionChart";
 import { CategoriaBarChart } from "@/components/dashboard/CategoriaBarChart";
+import { StatCardModal } from "@/components/dashboard/StatCardModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useEventModal } from "@/hooks/useEventModal";
 import { useFinancialChartData } from "@/hooks/useFinancialChartData";
+import { useStatCardData, type StatCardModalData } from "@/hooks/useStatCardData";
 
 import type { EventItem } from "@/pages/Events";
 
@@ -70,6 +72,21 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasTenantId, setHasTenantId] = useState<boolean | null>(null);
+  
+  // Modal states
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'bandas' | 'eventos' | 'membros' | 'receita' | 'despesa'>('bandas');
+  const [modalData, setModalData] = useState<StatCardModalData>({});
+  
+  // Stat card data hook
+  const {
+    fetchBandasData,
+    fetchEventosData,
+    fetchMembrosData,
+    fetchReceitasData,
+    fetchDespesasData,
+    loading: statCardLoading
+  } = useStatCardData();
   
   // Controle para evitar múltiplas chamadas simultâneas
   const isLoadingRef = useRef(false);
@@ -163,7 +180,8 @@ const Dashboard = () => {
           active_bands: typeof metricsObj.active_bands === 'number' ? metricsObj.active_bands : Number(metricsObj.active_bands) || 0,
           upcoming_events: typeof metricsObj.upcoming_events === 'number' ? metricsObj.upcoming_events : Number(metricsObj.upcoming_events) || 0,
           total_members: typeof metricsObj.total_members === 'number' ? metricsObj.total_members : Number(metricsObj.total_members) || 0,
-          monthly_revenue: typeof metricsObj.monthly_revenue === 'number' ? metricsObj.monthly_revenue : Number(metricsObj.monthly_revenue) || 0
+          monthly_revenue: typeof metricsObj.monthly_revenue === 'number' ? metricsObj.monthly_revenue : Number(metricsObj.monthly_revenue) || 0,
+          monthly_expenses: typeof metricsObj.monthly_expenses === 'number' ? metricsObj.monthly_expenses : Number(metricsObj.monthly_expenses) || 0
         };
         
         setDashboardMetrics(validatedMetrics);
@@ -320,38 +338,82 @@ const Dashboard = () => {
         </Card>
       )}
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-        <StatCard
-          title="Bandas Ativas"
-          value={formattedMetrics.activeBands}
-          icon={<Music2 className="h-4 w-4 text-muted-foreground" />}
-          isLoading={isLoading}
-        />
-        <StatCard
-          title="Próximos Eventos"
-          value={formattedMetrics.upcomingEvents}
-          icon={<CalendarDays className="h-4 w-4 text-muted-foreground" />}
-          isLoading={isLoading}
-        />
-        <StatCard
-          title="Total de Membros"
-          value={formattedMetrics.totalMembers}
-          icon={<Users className="h-4 w-4 text-muted-foreground" />}
-          isLoading={isLoading}
-        />
-        <StatCard
-          title="Receita Mensal"
-          value={formattedMetrics.monthlyRevenue}
-          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-          isLoading={isLoading}
-        />
-        <StatCard
-          title="Despesa Mensal"
-          value={formattedMetrics.monthlyExpense}
-          icon={<TrendingDown className="h-4 w-4 text-muted-foreground" />}
-          isLoading={isLoading}
-        />
-      </div>
+      {/* Handlers para abrir modais dos cards */}
+      {(() => {
+        const handleCardClick = async (type: 'bandas' | 'eventos' | 'membros' | 'receita' | 'despesa') => {
+          // Otimização: Abrir modal imediatamente e carregar dados em paralelo
+          setModalType(type);
+          setModalOpen(true);
+          setModalData({}); // Limpar dados anteriores
+          
+          try {
+            let data: StatCardModalData = {};
+            
+            switch (type) {
+              case 'bandas':
+                data = await fetchBandasData();
+                break;
+              case 'eventos':
+                data = await fetchEventosData();
+                break;
+              case 'membros':
+                data = await fetchMembrosData();
+                break;
+              case 'receita':
+                data = await fetchReceitasData();
+                break;
+              case 'despesa':
+                data = await fetchDespesasData();
+                break;
+            }
+            
+            setModalData(data);
+          } catch (error) {
+            console.error('Erro ao carregar dados do modal:', error);
+            setModalData({});
+          }
+        };
+
+        return (
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+            <StatCard
+              title="Bandas Ativas"
+              value={formattedMetrics.activeBands}
+              icon={<Music2 className="h-4 w-4 text-muted-foreground" />}
+              isLoading={isLoading}
+              onClick={() => handleCardClick('bandas')}
+            />
+            <StatCard
+              title="Próximos Eventos"
+              value={formattedMetrics.upcomingEvents}
+              icon={<CalendarDays className="h-4 w-4 text-muted-foreground" />}
+              isLoading={isLoading}
+              onClick={() => handleCardClick('eventos')}
+            />
+            <StatCard
+              title="Total de Membros"
+              value={formattedMetrics.totalMembers}
+              icon={<Users className="h-4 w-4 text-muted-foreground" />}
+              isLoading={isLoading}
+              onClick={() => handleCardClick('membros')}
+            />
+            <StatCard
+              title="Receita Mensal"
+              value={formattedMetrics.monthlyRevenue}
+              icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+              isLoading={isLoading}
+              onClick={() => handleCardClick('receita')}
+            />
+            <StatCard
+              title="Despesa Mensal"
+              value={formattedMetrics.monthlyExpense}
+              icon={<TrendingDown className="h-4 w-4 text-muted-foreground" />}
+              isLoading={isLoading}
+              onClick={() => handleCardClick('despesa')}
+            />
+          </div>
+        );
+      })()}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
@@ -479,31 +541,44 @@ const Dashboard = () => {
           onEventUpdated={loadDashboardData}
         />
       )}
+
+      {/* Modal dos Cards */}
+      <StatCardModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        type={modalType}
+        data={modalData}
+      />
     </main>
   );
-};
+}
 
-// Função formatEventDate movida para o topo do arquivo
-
+// Componente StatCard movido para fora do Dashboard
 interface StatCardProps {
   title: string;
   value: string;
   icon: React.ReactNode;
   isLoading?: boolean;
+  onClick?: () => void;
 }
 
-function StatCard({ title, value, icon, isLoading = false }: StatCardProps) {
+function StatCard({ title, value, icon, isLoading = false, onClick }: StatCardProps) {
   return (
-    <Card>
+    <Card 
+      className="group cursor-pointer transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary/20 active:scale-[0.98]"
+      onClick={onClick}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {icon}
+        <CardTitle className="text-sm font-medium transition-colors duration-300 group-hover:text-primary">{title}</CardTitle>
+        <div className="transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+          {icon}
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="h-7 bg-muted animate-pulse rounded" />
         ) : (
-          <div className="text-2xl font-bold">{value}</div>
+          <div className="text-2xl font-bold transition-colors duration-300 group-hover:text-primary">{value}</div>
         )}
       </CardContent>
     </Card>
