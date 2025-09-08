@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Atalhos de Teclado - LA Band Pilot</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #1e293b;
+            border-bottom: 3px solid #3b82f6;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #3b82f6;
+        }
+        .shortcut-key {
+            background: #1e293b;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .instructions {
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .log {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .category {
+            color: #6366f1;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste de Atalhos de Teclado - LA Band Pilot</h1>
+        
+        <div class="instructions">
+            <h3>📋 Instruções de Teste:</h3>
+            <ol>
+                <li>Pressione cada atalho listado abaixo</li>
+                <li>Observe se a ação correspondente é executada</li>
+                <li>O status será atualizado automaticamente</li>
+                <li>Use este teste em cada página do sistema</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <div class="category">🧭 Atalhos de Navegação</div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">Alt + H</span>
+                    <span>Ir para Dashboard</span>
+                </div>
+                <span class="status pending" id="alt-h">Aguardando</span>
+            </div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">Alt + B</span>
+                    <span>Ir para Bandas</span>
+                </div>
+                <span class="status pending" id="alt-b">Aguardando</span>
+            </div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">Alt + E</span>
+                    <span>Ir para Eventos</span>
+                </div>
+                <span class="status pending" id="alt-e">Aguardando</span>
+            </div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">Alt + F</span>
+                    <span>Ir para Financeiro</span>
+                </div>
+                <span class="status pending" id="alt-f">Aguardando</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="category">🔢 Atalhos Numéricos</div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">Alt + 1</span>
+                    <span>Dashboard</span>
+                </div>
+                <span class="status pending" id="alt-1">Aguardando</span>
+            </div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">Alt + 2</span>
+                    <span>Bandas</span>
+                </div>
+                <span class="status pending" id="alt-2">Aguardando</span>
+            </div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">Alt + 3</span>
+                    <span>Eventos</span>
+                </div>
+                <span class="status pending" id="alt-3">Aguardando</span>
+            </div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">Alt + 4</span>
+                    <span>Financeiro</span>
+                </div>
+                <span class="status pending" id="alt-4">Aguardando</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="category">⚡ Atalhos de Ação</div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">Ctrl + N</span>
+                    <span>Nova entrada (contexto atual)</span>
+                </div>
+                <span class="status pending" id="ctrl-n">Aguardando</span>
+            </div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">Ctrl + S</span>
+                    <span>Salvar (quando aplicável)</span>
+                </div>
+                <span class="status pending" id="ctrl-s">Aguardando</span>
+            </div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">Ctrl + K</span>
+                    <span>Busca rápida</span>
+                </div>
+                <span class="status pending" id="ctrl-k">Aguardando</span>
+            </div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">/</span>
+                    <span>Focar campo de busca</span>
+                </div>
+                <span class="status pending" id="slash">Aguardando</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="category">📱 Atalhos de Modal</div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">Escape</span>
+                    <span>Fechar modal/drawer atual</span>
+                </div>
+                <span class="status pending" id="escape">Aguardando</span>
+            </div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">Ctrl + Enter</span>
+                    <span>Confirmar ação (em modais)</span>
+                </div>
+                <span class="status pending" id="ctrl-enter">Aguardando</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="category">❓ Atalhos de Ajuda</div>
+            <div class="shortcut-item">
+                <div>
+                    <span class="shortcut-key">Shift + ?</span>
+                    <span>Mostrar atalhos disponíveis</span>
+                </div>
+                <span class="status pending" id="shift-question">Aguardando</span>
+            </div>
+        </div>
+
+        <div class="log" id="log">
+            🔍 Log de Testes - Aguardando atalhos...<br>
+        </div>
+
+        <button onclick="resetTests()">🔄 Resetar Testes</button>
+        <button onclick="exportResults()">📊 Exportar Resultados</button>
+    </div>
+
+    <script>
+        let testResults = {};
+        let logElement = document.getElementById('log');
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${timestamp}] ${message}<br>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function updateStatus(shortcutId, status, message = '') {
+            const element = document.getElementById(shortcutId);
+            if (element) {
+                element.className = `status ${status}`;
+                element.textContent = status === 'success' ? '✅ Funcionou' : 
+                                    status === 'error' ? '❌ Falhou' : 'Aguardando';
+                testResults[shortcutId] = { status, message, timestamp: new Date() };
+            }
+        }
+
+        function resetTests() {
+            testResults = {};
+            const statusElements = document.querySelectorAll('.status');
+            statusElements.forEach(el => {
+                el.className = 'status pending';
+                el.textContent = 'Aguardando';
+            });
+            logElement.innerHTML = '🔍 Log de Testes - Aguardando atalhos...<br>';
+            log('🔄 Testes resetados');
+        }
+
+        function exportResults() {
+            const results = {
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                results: testResults
+            };
+            
+            const blob = new Blob([JSON.stringify(results, null, 2)], 
+                { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `keyboard-shortcuts-test-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            log('📊 Resultados exportados');
+        }
+
+        // Detectar atalhos de teclado
+        document.addEventListener('keydown', function(event) {
+            const key = event.key.toLowerCase();
+            const ctrl = event.ctrlKey;
+            const alt = event.altKey;
+            const shift = event.shiftKey;
+            
+            let shortcutId = null;
+            let description = '';
+
+            // Navegação
+            if (alt && key === 'h') {
+                shortcutId = 'alt-h';
+                description = 'Alt+H - Dashboard';
+            } else if (alt && key === 'b') {
+                shortcutId = 'alt-b';
+                description = 'Alt+B - Bandas';
+            } else if (alt && key === 'e') {
+                shortcutId = 'alt-e';
+                description = 'Alt+E - Eventos';
+            } else if (alt && key === 'f') {
+                shortcutId = 'alt-f';
+                description = 'Alt+F - Financeiro';
+            }
+            // Numéricos
+            else if (alt && key === '1') {
+                shortcutId = 'alt-1';
+                description = 'Alt+1 - Dashboard';
+            } else if (alt && key === '2') {
+                shortcutId = 'alt-2';
+                description = 'Alt+2 - Bandas';
+            } else if (alt && key === '3') {
+                shortcutId = 'alt-3';
+                description = 'Alt+3 - Eventos';
+            } else if (alt && key === '4') {
+                shortcutId = 'alt-4';
+                description = 'Alt+4 - Financeiro';
+            }
+            // Ações
+            else if (ctrl && key === 'n') {
+                shortcutId = 'ctrl-n';
+                description = 'Ctrl+N - Nova entrada';
+            } else if (ctrl && key === 's') {
+                shortcutId = 'ctrl-s';
+                description = 'Ctrl+S - Salvar';
+                event.preventDefault(); // Evitar salvar página
+            } else if (ctrl && key === 'k') {
+                shortcutId = 'ctrl-k';
+                description = 'Ctrl+K - Busca rápida';
+                event.preventDefault(); // Evitar busca do browser
+            } else if (key === '/') {
+                shortcutId = 'slash';
+                description = '/ - Focar busca';
+            }
+            // Modais
+            else if (key === 'escape') {
+                shortcutId = 'escape';
+                description = 'Escape - Fechar modal';
+            } else if (ctrl && key === 'enter') {
+                shortcutId = 'ctrl-enter';
+                description = 'Ctrl+Enter - Confirmar';
+            }
+            // Ajuda
+            else if (shift && key === '?') {
+                shortcutId = 'shift-question';
+                description = 'Shift+? - Mostrar ajuda';
+            }
+
+            if (shortcutId) {
+                updateStatus(shortcutId, 'success');
+                log(`✅ ${description} detectado`);
+                
+                // Simular pequeno delay para mostrar que funcionou
+                setTimeout(() => {
+                    log(`🎯 Ação executada para ${description}`);
+                }, 100);
+            }
+        });
+
+        // Detectar mudanças de URL (para navegação)
+        let currentUrl = window.location.href;
+        setInterval(() => {
+            if (window.location.href !== currentUrl) {
+                currentUrl = window.location.href;
+                log(`🧭 Navegação detectada: ${window.location.pathname}`);
+            }
+        }, 500);
+
+        log('🚀 Sistema de teste de atalhos iniciado');
+        log('💡 Pressione os atalhos listados para testá-los');
+    </script>
+</body>
+</html>

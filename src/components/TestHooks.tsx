@@ -11,7 +11,7 @@ interface TestResult {
   count?: number;
 }
 
-export function TestHooks() {
+function TestHooks() {
   const [bandsResult, setBandsResult] = useState<TestResult | null>(null);
   const [eventsResult, setEventsResult] = useState<TestResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -172,3 +172,5 @@ export function TestHooks() {
     </div>
   );
 }
+
+export default TestHooks;

@@ -1,14 +1,14 @@
 import { Link, NavLink } from "react-router-dom";
-import { Music, LayoutGrid, Users, CalendarDays, DollarSign, LogOut, WifiOff, Wifi } from "lucide-react";
+import { Music, LayoutGrid, Users, CalendarDays, DollarSign, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import { HealthStatusBadge } from "@/components/ui/health-status";
+import { useNavigationShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 const Header = () => {
   const { user, signOut } = useAuth();
-  const { isOnline, queuedOperationsCount } = useNetworkStatus();
+  
+  // Ativar atalhos de navegação (funcionalidade mantida, apenas sem indicadores visuais)
+  useNavigationShortcuts();
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -57,22 +57,6 @@ const Header = () => {
             </>
           ) : (
             <>
-              {/* Network Status and Health Indicators */}
-              <div className="flex items-center gap-2">
-                <HealthStatusBadge />
-                {!isOnline && (
-                  <Badge variant="destructive" className="flex items-center gap-1">
-                    <WifiOff className="h-3 w-3" />
-                    Offline
-                  </Badge>
-                )}
-                {queuedOperationsCount > 0 && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    <Wifi className="h-3 w-3" />
-                    {queuedOperationsCount} pendente{queuedOperationsCount > 1 ? 's' : ''}
-                  </Badge>
-                )}
-              </div>
               <span className="hidden text-sm text-muted-foreground md:inline">{user.email}</span>
               <Button variant="outline" onClick={async () => { await signOut(); }}>
                 <LogOut className="mr-2 h-4 w-4" /> Sair

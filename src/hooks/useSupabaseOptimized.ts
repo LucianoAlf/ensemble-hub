@@ -39,8 +39,8 @@ class CacheManager {
   private cleanupInterval: NodeJS.Timeout;
 
   constructor() {
-    // Cleanup expired entries every 5 minutes
-    this.cleanupInterval = setInterval(() => this.cleanup(), 5 * 60 * 1000);
+    // Cleanup expired entries every 2 minutes for better performance
+    this.cleanupInterval = setInterval(() => this.cleanup(), 2 * 60 * 1000);
   }
 
   get<T>(key: string): T | null {

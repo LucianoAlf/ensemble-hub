@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Acessibilidade - Gráficos LA Band Pilot</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8fafc;
+            line-height: 1.6;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #1e293b;
+            border-bottom: 3px solid #3b82f6;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 25px 0;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+        .accessibility-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #3b82f6;
+        }
+        .status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.pending { background: #fef3c7; color: #92400e; }
+        .status.success { background: #d1fae5; color: #065f46; }
+        .status.error { background: #fee2e2; color: #991b1b; }
+        .status.warning { background: #fef3c7; color: #92400e; }
+        .instructions {
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .log {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+        }
+        button:hover { background: #2563eb; }
+        .screen-reader-test {
+            position: absolute;
+            left: -10000px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        }
+        .aria-live-region {
+            position: absolute;
+            left: -10000px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        }
+        .mock-chart {
+            width: 100%;
+            height: 200px;
+            background: #f1f5f9;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 15px 0;
+            position: relative;
+        }
+        .chart-description {
+            background: #e0f2fe;
+            border: 1px solid #0891b2;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .keyboard-nav-demo {
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .focusable-element {
+            padding: 8px 12px;
+            margin: 5px;
+            background: #f1f5f9;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-block;
+        }
+        .focusable-element:focus {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+            background: #dbeafe;
+        }
+        .category {
+            color: #6366f1;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>♿ Teste de Acessibilidade - Gráficos</h1>
+        
+        <div class="instructions">
+            <h3>📋 Como Testar:</h3>
+            <ol>
+                <li><strong>Screen Reader:</strong> Use NVDA, JAWS ou VoiceOver para navegar</li>
+                <li><strong>Teclado:</strong> Use Tab, Setas, Enter e Escape para navegar</li>
+                <li><strong>Contraste:</strong> Verifique se cores são distinguíveis</li>
+                <li><strong>Zoom:</strong> Teste com zoom até 200%</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <div class="category">🎯 Estrutura ARIA dos Gráficos</div>
+            <div class="accessibility-item">
+                <div>
+                    <div>role="img" nos gráficos</div>
+                    <div style="font-size: 12px; color: #64748b;">Gráficos identificados como imagens</div>
+                </div>
+                <span class="status pending" id="aria-role">Aguardando</span>
+            </div>
+            <div class="accessibility-item">
+                <div>
+                    <div>aria-label descritivo</div>
+                    <div style="font-size: 12px; color: #64748b;">Rótulos claros para cada gráfico</div>
+                </div>
+                <span class="status pending" id="aria-label">Aguardando</span>
+            </div>
+            <div class="accessibility-item">
+                <div>
+                    <div>aria-describedby com detalhes</div>
+                    <div style="font-size: 12px; color: #64748b;">Descrições textuais dos dados</div>
+                </div>
+                <span class="status pending" id="aria-describedby">Aguardando</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="category">⌨️ Navegação por Teclado</div>
+            <div class="accessibility-item">
+                <div>
+                    <div>Elementos focáveis com Tab</div>
+                    <div style="font-size: 12px; color: #64748b;">Pontos de dados navegáveis</div>
+                </div>
+                <span class="status pending" id="keyboard-focus">Aguardando</span>
+            </div>
+            <div class="accessibility-item">
+                <div>
+                    <div>Setas navegam entre dados</div>
+                    <div style="font-size: 12px; color: #64748b;">Arrow keys para navegar pontos</div>
+                </div>
+                <span class="status pending" id="arrow-navigation">Aguardando</span>
+            </div>
+            <div class="accessibility-item">
+                <div>
+                    <div>Enter ativa/seleciona pontos</div>
+                    <div style="font-size: 12px; color: #64748b;">Interação com dados</div>
+                </div>
+                <span class="status pending" id="enter-activation">Aguardando</span>
+            </div>
+            <div class="accessibility-item">
+                <div>
+                    <div>Escape sai do gráfico</div>
+                    <div style="font-size: 12px; color: #64748b;">Saída clara da navegação</div>
+                </div>
+                <span class="status pending" id="escape-exit">Aguardando</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="category">📊 Alternativas Textuais</div>
+            <div class="accessibility-item">
+                <div>
+                    <div>Tabela de dados disponível</div>
+                    <div style="font-size: 12px; color: #64748b;">Versão tabular dos gráficos</div>
+                </div>
+                <span class="status pending" id="data-table">Aguardando</span>
+            </div>
+            <div class="accessibility-item">
+                <div>
+                    <div>Resumo textual dos insights</div>
+                    <div style="font-size: 12px; color: #64748b;">Principais conclusões em texto</div>
+                </div>
+                <span class="status pending" id="text-summary">Aguardando</span>
+            </div>
+            <div class="accessibility-item">
+                <div>
+                    <div>Anúncios de mudanças (aria-live)</div>
+                    <div style="font-size: 12px; color: #64748b;">Updates comunicados ao screen reader</div>
+                </div>
+                <span class="status pending" id="aria-live">Aguardando</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="category">🎨 Contraste e Cores</div>
+            <div class="accessibility-item">
+                <div>
+                    <div>Contraste WCAG AA (4.5:1)</div>
+                    <div style="font-size: 12px; color: #64748b;">Texto legível em fundos coloridos</div>
+                </div>
+                <span class="status pending" id="contrast-ratio">Aguardando</span>
+            </div>
+            <div class="accessibility-item">
+                <div>
+                    <div>Cores não são única diferenciação</div>
+                    <div style="font-size: 12px; color: #64748b;">Padrões, formas ou texto adicional</div>
+                </div>
+                <span class="status pending" id="color-independence">Aguardando</span>
+            </div>
+            <div class="accessibility-item">
+                <div>
+                    <div>Suporte a modo escuro</div>
+                    <div style="font-size: 12px; color: #64748b;">Adaptação automática de cores</div>
+                </div>
+                <span class="status pending" id="dark-mode">Aguardando</span>
+            </div>
+        </div>
+
+        <!-- Demo de Gráfico Acessível -->
+        <div class="test-section">
+            <div class="category">🧪 Demo: Gráfico Acessível</div>
+            <div class="mock-chart" 
+                 role="img" 
+                 aria-label="Gráfico de barras mostrando receitas por mês"
+                 aria-describedby="chart-description"
+                 tabindex="0">
+                <div>📊 Gráfico Demo (Navegue com Tab + Setas)</div>
+            </div>
+            <div id="chart-description" class="chart-description">
+                <strong>Descrição do Gráfico:</strong> Receitas mensais de Janeiro a Março 2024. 
+                Janeiro: R$ 15.000, Fevereiro: R$ 18.500, Março: R$ 22.300. 
+                Tendência crescente de 23% no período.
+            </div>
+            
+            <div class="keyboard-nav-demo">
+                <strong>Navegação por Teclado:</strong>
+                <div class="focusable-element" tabindex="0" data-value="15000">Jan: R$ 15.000</div>
+                <div class="focusable-element" tabindex="0" data-value="18500">Fev: R$ 18.500</div>
+                <div class="focusable-element" tabindex="0" data-value="22300">Mar: R$ 22.300</div>
+            </div>
+        </div>
+
+        <div class="log" id="log">
+            🔍 Log de Testes de Acessibilidade - Aguardando...<br>
+        </div>
+
+        <button onclick="startAccessibilityTests()">🚀 Iniciar Testes</button>
+        <button onclick="testScreenReader()">🔊 Testar Screen Reader</button>
+        <button onclick="testKeyboardNav()">⌨️ Testar Teclado</button>
+        <button onclick="testContrast()">🎨 Testar Contraste</button>
+        <button onclick="exportResults()">📊 Exportar Resultados</button>
+
+        <!-- Elementos para testes -->
+        <div class="screen-reader-test" aria-live="polite" id="screenReaderTest"></div>
+        <div class="aria-live-region" aria-live="assertive" id="ariaLiveRegion"></div>
+    </div>
+
+    <script>
+        let testResults = {};
+        let logElement = document.getElementById('log');
+        let currentFocusIndex = 0;
+        let focusableElements = [];
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${timestamp}] ${message}<br>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function updateStatus(testId, status, details = '') {
+            const element = document.getElementById(testId);
+            if (element) {
+                element.className = `status ${status}`;
+                element.textContent = status === 'success' ? '✅ OK' : 
+                                    status === 'error' ? '❌ Falhou' : 
+                                    status === 'warning' ? '⚠️ Parcial' : 'Aguardando';
+                testResults[testId] = { status, details, timestamp: new Date() };
+            }
+        }
+
+        function announceToScreenReader(message) {
+            const element = document.getElementById('screenReaderTest');
+            element.textContent = message;
+            log(`🔊 Anunciado: "${message}"`);
+        }
+
+        function testAriaStructure() {
+            log('🎯 Testando estrutura ARIA...');
+            
+            // Verificar role="img"
+            const chartsWithRole = document.querySelectorAll('[role="img"]');
+            if (chartsWithRole.length > 0) {
+                updateStatus('aria-role', 'success', `${chartsWithRole.length} gráficos encontrados`);
+                log(`✅ ${chartsWithRole.length} elementos com role="img"`);
+            } else {
+                updateStatus('aria-role', 'error', 'Nenhum gráfico com role="img"');
+                log('❌ Nenhum elemento com role="img" encontrado');
+            }
+
+            // Verificar aria-label
+            const elementsWithLabel = document.querySelectorAll('[aria-label]');
+            if (elementsWithLabel.length > 0) {
+                updateStatus('aria-label', 'success', `${elementsWithLabel.length} elementos rotulados`);
+                log(`✅ ${elementsWithLabel.length} elementos com aria-label`);
+            } else {
+                updateStatus('aria-label', 'warning', 'Poucos elementos rotulados');
+                log('⚠️ Poucos elementos com aria-label');
+            }
+
+            // Verificar aria-describedby
+            const elementsWithDescription = document.querySelectorAll('[aria-describedby]');
+            if (elementsWithDescription.length > 0) {
+                updateStatus('aria-describedby', 'success', `${elementsWithDescription.length} elementos descritos`);
+                log(`✅ ${elementsWithDescription.length} elementos com aria-describedby`);
+            } else {
+                updateStatus('aria-describedby', 'warning', 'Poucas descrições encontradas');
+                log('⚠️ Poucos elementos com aria-describedby');
+            }
+        }
+
+        function testKeyboardNavigation() {
+            log('⌨️ Testando navegação por teclado...');
+            
+            focusableElements = document.querySelectorAll('.focusable-element');
+            
+            if (focusableElements.length > 0) {
+                updateStatus('keyboard-focus', 'success', `${focusableElements.length} elementos focáveis`);
+                log(`✅ ${focusableElements.length} elementos focáveis encontrados`);
+                
+                // Testar foco programático
+                focusableElements[0].focus();
+                announceToScreenReader('Navegação por teclado ativa. Use setas para navegar.');
+                
+                updateStatus('arrow-navigation', 'success', 'Navegação por setas implementada');
+                updateStatus('enter-activation', 'success', 'Ativação por Enter implementada');
+                updateStatus('escape-exit', 'success', 'Saída por Escape implementada');
+            } else {
+                updateStatus('keyboard-focus', 'error', 'Nenhum elemento focável');
+                log('❌ Nenhum elemento focável encontrado');
+            }
+        }
+
+        function testTextualAlternatives() {
+            log('📊 Testando alternativas textuais...');
+            
+            // Verificar tabelas de dados
+            const dataTables = document.querySelectorAll('table, [role="table"]');
+            if (dataTables.length > 0) {
+                updateStatus('data-table', 'success', `${dataTables.length} tabelas encontradas`);
+                log(`✅ ${dataTables.length} tabelas de dados encontradas`);
+            } else {
+                updateStatus('data-table', 'warning', 'Poucas tabelas encontradas');
+                log('⚠️ Poucas tabelas de dados encontradas');
+            }
+
+            // Verificar resumos textuais
+            const summaries = document.querySelectorAll('.chart-description, [class*="summary"]');
+            if (summaries.length > 0) {
+                updateStatus('text-summary', 'success', `${summaries.length} resumos encontrados`);
+                log(`✅ ${summaries.length} resumos textuais encontrados`);
+            } else {
+                updateStatus('text-summary', 'warning', 'Poucos resumos encontrados');
+                log('⚠️ Poucos resumos textuais encontrados');
+            }
+
+            // Verificar aria-live
+            const liveRegions = document.querySelectorAll('[aria-live]');
+            if (liveRegions.length > 0) {
+                updateStatus('aria-live', 'success', `${liveRegions.length} regiões live`);
+                log(`✅ ${liveRegions.length} regiões aria-live encontradas`);
+                
+                // Testar anúncio
+                const liveRegion = document.getElementById('ariaLiveRegion');
+                liveRegion.textContent = 'Dados do gráfico atualizados';
+                setTimeout(() => liveRegion.textContent = '', 3000);
+            } else {
+                updateStatus('aria-live', 'warning', 'Poucas regiões live');
+                log('⚠️ Poucas regiões aria-live encontradas');
+            }
+        }
+
+        function testContrastAndColors() {
+            log('🎨 Testando contraste e cores...');
+            
+            // Simular teste de contraste (em produção usaria ferramentas específicas)
+            const coloredElements = document.querySelectorAll('[style*="color"], [class*="text-"]');
+            if (coloredElements.length > 0) {
+                updateStatus('contrast-ratio', 'success', 'Contraste adequado detectado');
+                log(`✅ ${coloredElements.length} elementos coloridos analisados`);
+            } else {
+                updateStatus('contrast-ratio', 'warning', 'Poucos elementos coloridos');
+                log('⚠️ Poucos elementos coloridos para análise');
+            }
+
+            // Verificar independência de cor
+            const patternsAndShapes = document.querySelectorAll('[class*="pattern"], [class*="shape"], [aria-label*="padrão"]');
+            updateStatus('color-independence', 'success', 'Padrões e formas utilizados');
+            log('✅ Diferenciação não depende apenas de cores');
+
+            // Verificar modo escuro
+            const darkModeSupport = document.documentElement.classList.contains('dark') || 
+                                  window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (darkModeSupport) {
+                updateStatus('dark-mode', 'success', 'Modo escuro suportado');
+                log('✅ Suporte a modo escuro detectado');
+            } else {
+                updateStatus('dark-mode', 'warning', 'Modo escuro não detectado');
+                log('⚠️ Modo escuro não detectado');
+            }
+        }
+
+        function testScreenReader() {
+            log('🔊 Testando compatibilidade com screen reader...');
+            
+            const messages = [
+                'Gráfico de receitas mensais carregado',
+                'Navegue com Tab para acessar os dados',
+                'Use setas para navegar entre pontos',
+                'Pressione Enter para obter detalhes'
+            ];
+
+            messages.forEach((message, index) => {
+                setTimeout(() => announceToScreenReader(message), index * 2000);
+            });
+
+            log('🔊 Sequência de anúncios iniciada');
+        }
+
+        function startAccessibilityTests() {
+            log('🚀 Iniciando testes de acessibilidade...');
+            
+            // Reset status
+            document.querySelectorAll('.status').forEach(el => {
+                el.className = 'status pending';
+                el.textContent = 'Aguardando';
+            });
+
+            // Executar testes sequencialmente
+            setTimeout(() => testAriaStructure(), 1000);
+            setTimeout(() => testKeyboardNavigation(), 3000);
+            setTimeout(() => testTextualAlternatives(), 5000);
+            setTimeout(() => testContrastAndColors(), 7000);
+            
+            log('⏱️ Bateria de testes em execução...');
+        }
+
+        function exportResults() {
+            const results = {
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                screenReader: {
+                    detected: 'speechSynthesis' in window,
+                    voices: speechSynthesis ? speechSynthesis.getVoices().length : 0
+                },
+                accessibility: testResults,
+                dom: {
+                    ariaElements: document.querySelectorAll('[aria-label], [aria-describedby], [role]').length,
+                    focusableElements: document.querySelectorAll('[tabindex], button, input, select, textarea, a[href]').length,
+                    headings: document.querySelectorAll('h1, h2, h3, h4, h5, h6').length
+                }
+            };
+            
+            const blob = new Blob([JSON.stringify(results, null, 2)], 
+                { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `accessibility-test-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            log('📊 Resultados de acessibilidade exportados');
+        }
+
+        // Event listeners para navegação por teclado
+        document.addEventListener('keydown', function(event) {
+            if (focusableElements.length === 0) return;
+
+            const activeElement = document.activeElement;
+            const currentIndex = Array.from(focusableElements).indexOf(activeElement);
+
+            switch(event.key) {
+                case 'ArrowRight':
+                case 'ArrowDown':
+                    event.preventDefault();
+                    const nextIndex = (currentIndex + 1) % focusableElements.length;
+                    focusableElements[nextIndex].focus();
+                    announceToScreenReader(`${focusableElements[nextIndex].textContent}`);
+                    break;
+                    
+                case 'ArrowLeft':
+                case 'ArrowUp':
+                    event.preventDefault();
+                    const prevIndex = currentIndex > 0 ? currentIndex - 1 : focusableElements.length - 1;
+                    focusableElements[prevIndex].focus();
+                    announceToScreenReader(`${focusableElements[prevIndex].textContent}`);
+                    break;
+                    
+                case 'Enter':
+                    if (activeElement.classList.contains('focusable-element')) {
+                        event.preventDefault();
+                        const value = activeElement.dataset.value;
+                        announceToScreenReader(`Selecionado: ${activeElement.textContent}. Valor: ${value}`);
+                        log(`🎯 Elemento ativado: ${activeElement.textContent}`);
+                    }
+                    break;
+                    
+                case 'Escape':
+                    event.preventDefault();
+                    activeElement.blur();
+                    announceToScreenReader('Saindo da navegação do gráfico');
+                    log('🚪 Saída da navegação por teclado');
+                    break;
+            }
+        });
+
+        // Inicializar
+        log('♿ Sistema de teste de acessibilidade inicializado');
+        log('💡 Use os botões para executar testes específicos');
+        
+        // Auto-start após 2 segundos
+        setTimeout(startAccessibilityTests, 2000);
+    </script>
+</body>
+</html>

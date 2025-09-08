@@ -4,19 +4,22 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Header from "@/components/layout/Header";
-import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import Bands from "./pages/Bands";
-import Events from "./pages/Events";
-import NotFound from "./pages/NotFound";
-import Auth from "./pages/Auth";
-import Financeiro from "./pages/Financeiro";
+import { createLazyPage } from "@/lib/lazy-loader";
 import { AuthProvider } from "@/contexts/AuthProvider";
 import { TenantProvider } from "@/contexts/TenantProvider";
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
-import { TestHooks } from "@/components/TestHooks";
 import { SkipLinks } from "@/components/accessibility/SkipLinks";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
+
+// Lazy load das páginas principais
+const Index = createLazyPage(() => import("./pages/Index"), "Página Inicial");
+const Dashboard = createLazyPage(() => import("./pages/Dashboard"), "Dashboard");
+const Bands = createLazyPage(() => import("./pages/Bands"), "Bandas");
+const Events = createLazyPage(() => import("./pages/Events"), "Eventos");
+const Financeiro = createLazyPage(() => import("./pages/Financeiro"), "Financeiro");
+const Auth = createLazyPage(() => import("./pages/Auth"), "Autenticação");
+const NotFound = createLazyPage(() => import("./pages/NotFound"), "Página Não Encontrada");
+const TestHooks = createLazyPage(() => import("./components/TestHooks"), "Testes");
 
 const queryClient = new QueryClient();
 
