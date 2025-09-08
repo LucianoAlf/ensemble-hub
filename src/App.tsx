@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Financeiro from "./pages/Financeiro";
 import { AuthProvider } from "@/contexts/AuthProvider";
+import { TenantProvider } from "@/contexts/TenantProvider";
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
 import { TestHooks } from "@/components/TestHooks";
 
@@ -23,7 +24,8 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
-        <BrowserRouter>
+        <TenantProvider>
+          <BrowserRouter>
           <Header />
           <Routes>
             <Route path="/" element={<Index />} />
@@ -71,7 +73,8 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
+          </BrowserRouter>
+        </TenantProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

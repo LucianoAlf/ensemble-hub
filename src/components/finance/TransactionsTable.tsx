@@ -8,7 +8,7 @@ import { MoreHorizontal, Edit, Check, Trash2, Music, Calendar } from "lucide-rea
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useTransactions } from "@/hooks/useFinancialData";
-import { useTenant } from "@/hooks/useTenant";
+import { useTenant } from "@/contexts/TenantProvider";
 // Remove unused import since FinancialTransaction type is not directly used
 
 export const TransactionsTable = () => {

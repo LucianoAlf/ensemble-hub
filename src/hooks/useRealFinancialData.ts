@@ -11,7 +11,7 @@ import type {
   RecentEvent 
 } from '@/services/realFinancialService';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseWithTimeout as supabase } from '@/lib/supabase-with-timeout';
 
 export interface UseRealFinancialDataReturn {
   // Data

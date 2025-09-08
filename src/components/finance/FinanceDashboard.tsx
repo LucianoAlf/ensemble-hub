@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Calendar, Users, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useRealFinancialData } from "@/hooks/useRealFinancialData";
-import { useTenant } from "@/hooks/useTenant";
+import { useTenant } from "@/contexts/TenantProvider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { useTransactions } from '@/hooks/useFinancialData';
@@ -11,7 +11,7 @@ import { useMemo, useCallback, useRef } from 'react';
 
 const FinanceDashboard = () => {
   // Obter tenant_id do usuário autenticado
-  const { tenantId, loading: tenantLoading, error: tenantError, hasTenant } = useTenant();
+  const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   
   const {
     summary,
@@ -180,7 +180,7 @@ const FinanceDashboard = () => {
   }
 
   // Tenant error state
-  if (tenantError || !hasTenant) {
+  if (tenantError || !tenantId) {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />

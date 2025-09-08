@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, DollarSign, Clock, AlertTriangle } from "lucide-react";
 import { useDashboardMetrics } from "@/hooks/useFinancialData";
-import { useTenant } from "@/hooks/useTenant";
+import { useTenant } from "@/contexts/TenantProvider";
 
 export const KpiBar: React.FC = () => {
   const { tenantId } = useTenant();

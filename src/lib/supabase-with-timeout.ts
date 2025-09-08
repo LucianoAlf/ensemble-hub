@@ -85,5 +85,8 @@ export const supabaseOperations = {
   }
 };
 
+// Wrapper simples que mantém compatibilidade
+export const supabaseWithTimeout = supabase;
+
 // Manter compatibilidade - exportar o cliente original também
 export { supabase };

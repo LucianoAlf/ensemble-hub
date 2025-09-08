@@ -4,7 +4,7 @@ import { FileText, Download, Calendar, Filter, BarChart3, Loader2, AlertCircle, 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { useRealFinancialData } from "@/hooks/useRealFinancialData";
 import { useTransactions } from "@/hooks/useFinancialData";
-import { useTenant } from "@/hooks/useTenant";
+import { useTenant } from "@/contexts/TenantProvider";
 import { financialCalculations } from "@/services/financialCalculationService";
 import { formatCurrency } from "@/types/financial";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -29,7 +29,7 @@ const FinanceReports = () => {
   const lastTransactionsHash = useRef<string>('');
   
   // Obter tenant_id do usuário autenticado
-  const { tenantId, loading: tenantLoading, error: tenantError, hasTenant } = useTenant();
+  const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   
   // Usar os mesmos hooks que o Dashboard
   const { summary, loading: summaryLoading, error: summaryError } = useRealFinancialData(tenantId || '');
@@ -492,7 +492,7 @@ const FinanceReports = () => {
   }
 
   // Tenant error state
-  if (tenantError || !hasTenant) {
+  if (tenantError || !tenantId) {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />

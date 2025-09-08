@@ -4,7 +4,7 @@ import { Calendar, TrendingUp, TrendingDown, Music } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useTransactions } from "@/hooks/useFinancialData";
-import { useTenant } from "@/hooks/useTenant";
+import { useTenant } from "@/contexts/TenantProvider";
 import { useMemo } from "react";
 
 interface EventSummary {

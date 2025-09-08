@@ -3,7 +3,7 @@
  * Real financial data service for Supabase transactions table
  */
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseWithTimeout as supabase } from '@/lib/supabase-with-timeout';
 import type { Database } from '@/integrations/supabase/types';
 import {
   FinancialTransaction,
