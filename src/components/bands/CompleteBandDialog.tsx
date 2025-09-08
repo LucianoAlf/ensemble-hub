@@ -188,7 +188,7 @@ export function CompleteBandDialog({
       loadBandData();
       loadUnidades();
     }
-  }, [open, bandId, client, toast]);
+  }, [open, bandId]);
 
   useEffect(() => {
     setCurrentMode(mode);
@@ -230,7 +230,7 @@ export function CompleteBandDialog({
         riderResponse,
         stageMapResponse
       ] = await Promise.all([
-        client.from('banda').select('*').eq('id', bandId).single(),
+        client.from('banda').select('*').eq('id', bandId).maybeSingle(),
         client.from('banda_integrante').select('*').eq('banda_id', bandId).eq('ativo', true),
         client.from('banda_repertorio').select('*').eq('banda_id', bandId).eq('ativo', true),
         client.from('banda_rider_tecnico').select('*').eq('banda_id', bandId).maybeSingle(),
@@ -238,6 +238,16 @@ export function CompleteBandDialog({
       ]);
 
       if (bandResponse.error) throw bandResponse.error;
+      if (!bandResponse.data) {
+        console.warn(`Banda com ID ${bandId} não encontrada no banco de dados`);
+        onOpenChange(false); // Fechar o modal
+        toast({
+          title: "Banda não encontrada",
+          description: "A banda selecionada não existe mais no sistema.",
+          variant: "destructive",
+        });
+        return;
+      }
       
       const band = bandResponse.data;
       setBandData(band);

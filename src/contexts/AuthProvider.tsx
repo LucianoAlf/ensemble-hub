@@ -8,7 +8,7 @@ interface AuthContextValue {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
 }
@@ -90,12 +90,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return { error: error as Error | null };
   };
 
-  const signUp: AuthContextValue["signUp"] = async (email, password) => {
+  const signUp: AuthContextValue["signUp"] = async (email, password, firstName, lastName) => {
     const redirectUrl = `${window.location.origin}/`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: redirectUrl },
+      options: { 
+        emailRedirectTo: redirectUrl,
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+        }
+      },
     });
     if (error) {
       toast("Erro ao criar conta", { description: error.message });
@@ -107,78 +113,50 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signInWithGoogle: AuthContextValue["signInWithGoogle"] = async () => {
     try {
-      console.log("Iniciando autenticação Google...");
-      
-      // Verificação segura de iframe
-      let isIframe = false;
+      // Detectar se está em ambiente restrito (como Windsurf)
+      let isRestrictedEnvironment = false;
       try {
-        isIframe = window !== window.top;
+        isRestrictedEnvironment = window !== window.top || 
+                                 navigator.userAgent.includes('Windsurf') ||
+                                 window.location !== window.parent.location;
       } catch (e) {
-        isIframe = true; // Assume iframe se verificação falhar
-        console.log("Verificação de iframe falhou, assumindo iframe:", e);
+        isRestrictedEnvironment = true;
       }
-      if (isIframe) {
-        console.warn("App detectado em iframe, usando fallback...");
-        toast("Redirecionamento necessário", { 
-          description: "Por favor, abra o app em uma nova aba para fazer login com Google." 
-        });
-        const newWindow = window.open(window.location.href, '_blank');
-        if (newWindow) {
-          return { error: null };
-        } else {
-          toast("Popup bloqueado", { description: "Por favor, permita popups e tente novamente." });
-          return { error: new Error("Popup bloqueado") };
-        }
-      }
-      
-      // Configuração específica para ambiente local
+
       const currentOrigin = window.location.origin;
       const redirectUrl = currentOrigin.includes('localhost') || currentOrigin.includes('127.0.0.1') 
         ? `${currentOrigin}/auth` 
         : `${currentOrigin}/dashboard`;
       
-      console.log('OAuth redirect URL:', redirectUrl);
-      
+      // Sempre usar redirecionamento direto para evitar problemas de popup
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: redirectUrl,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          scopes: 'email profile openid'
+          queryParams: { access_type: 'offline', prompt: 'consent' },
+          scopes: 'email profile openid',
+          skipBrowserRedirect: false
         }
       });
 
       if (error) {
-        console.error("Erro no OAuth:", error);
-        toast("Erro no login com Google", { description: error.message });
-        return { error: error as Error };
+        console.error("Erro no login com Google:", error);
+        if (isRestrictedEnvironment) {
+          toast("Popup bloqueado", { 
+            description: "Por favor, permita popups e tente novamente." 
+          });
+        } else {
+          toast("Erro no login", { description: error.message });
+        }
+        return { error };
       }
 
-      // Redirecionamento seguro
       if (data?.url) {
-        console.log("Redirecionando para:", data.url);
-        try {
-          window.location.href = data.url;
-          return { data, error: null };
-        } catch (redirectError) {
-          console.error("Erro no redirecionamento direto:", redirectError);
-          // Fallback: abrir em nova aba
-          const newWindow = window.open(data.url, '_blank');
-          if (newWindow) {
-            toast("Redirecionamento", { description: "Login aberto em nova aba." });
-            return { data, error: null };
-          } else {
-            toast("Erro no redirecionamento", { 
-              description: "Por favor, permita pop-ups para este site." 
-            });
-            return { error: new Error("Redirecionamento bloqueado") as Error };
-          }
-        }
+        // Forçar redirecionamento na mesma janela
+        window.location.replace(data.url);
+        return { error: null };
       }
-      
+
       return { error: null };
     } catch (error) {
       console.error("Erro ao fazer login com Google:", error);
@@ -188,13 +166,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut: AuthContextValue["signOut"] = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast("Erro ao sair", { description: error.message });
-    } else {
+    try {
+      // Limpar storage local primeiro
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Forçar atualização do estado imediatamente
+      setSession(null);
+      setUser(null);
+      
+      // Tentar logout do Supabase silenciosamente
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await supabase.auth.signOut({ scope: 'local' });
+        }
+      } catch (supabaseError) {
+        console.log("Erro ignorado do Supabase durante logout:", supabaseError);
+      }
+      
       toast("Até breve", { description: "Você saiu da sua conta." });
+      return { error: null };
+    } catch (error) {
+      console.error("Erro inesperado no logout:", error);
+      // Garantir limpeza e atualização de estado
+      localStorage.clear();
+      sessionStorage.clear();
+      setSession(null);
+      setUser(null);
+      toast("Logout realizado", { description: "Sessão encerrada." });
+      return { error: null };
     }
-    return { error: error as Error | null };
   };
 
   const value = useMemo<AuthContextValue>(() => ({ user, session, loading, signIn, signUp, signOut, signInWithGoogle }), [user, session, loading]);

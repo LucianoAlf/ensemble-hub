@@ -10,10 +10,12 @@ const Header = () => {
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-md bg-gradient-to-br from-primary to-sidebar-ring flex items-center justify-center">
-            <Music className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="font-semibold tracking-tight">LA Music Hub</span>
+          <img 
+            src="https://i.imgur.com/0MJGdMM.png" 
+            alt="LA Band Pilot Logo" 
+            className="h-8 w-8 rounded-md object-contain"
+          />
+          <span className="font-semibold tracking-tight">LA Band Pilot</span>
         </Link>
 
         <nav className="hidden gap-6 md:flex">
@@ -42,8 +44,8 @@ const Header = () => {
         <div className="flex items-center gap-3">
           {!user ? (
             <>
-              <Button variant="ghost" asChild>
-                <Link to="/dashboard">Demo</Link>
+              <Button variant="ghost" asChild className="invisible">
+                <span>Placeholder</span>
               </Button>
               <Button variant="hero" asChild>
                 <Link to="/auth">Entrar</Link>

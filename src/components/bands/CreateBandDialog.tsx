@@ -438,13 +438,17 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
         console.log('Mapa de palco criado');
       }
 
-      // Adicionar criador como membro da banda
+      // Adicionar criador como integrante da banda
       const { error: memberError } = await client
-        .from('banda_membro')
+        .from('banda_integrante')
         .insert({
           banda_id: bandId,
-          user_id: userId,
-          papel: 'criador'
+          nome: 'Criador da Banda', // TODO: Pegar nome real do usuário
+          instrumento: 'Não especificado',
+          funcao: 'Criador',
+          data_entrada: new Date().toISOString().split('T')[0],
+          ativo: true,
+          tenant_id: 'd93bd1e5-245e-4a40-9027-4bd669ccc390'
         });
 
       if (memberError) throw memberError;

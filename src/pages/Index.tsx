@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/hero-music.jpg";
-import { ArrowRight, Music2, ShieldCheck, BarChart } from "lucide-react";
+import { ArrowRight, Music2, Users, DollarSign, CalendarDays } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 import { Link } from "react-router-dom";
 
 const Index = () => {
   useSEO({
-    title: "LA Music Hub — Gestão de Bandas",
+    title: "LA BAND PILOT — Gestão de Bandas",
     description: "Gerencie bandas, eventos e finanças em um único hub moderno.",
     canonical: window.location.origin,
   });
@@ -32,25 +32,27 @@ const Index = () => {
             Organize bandas, setlists, eventos, contratos e pagamentos com um fluxo simples e poderoso.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <Button variant="hero" size="xl" asChild>
+            <Button variant="hero" size="xl" asChild className="group transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-0.5 hover:scale-105 active:scale-95">
               <Link to="/dashboard">
                 Explorar Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:rotate-12 group-hover:translate-x-1" />
               </Link>
             </Button>
-            <Button variant="outline" size="xl" asChild>
-              <Link to="/bands">Gerenciar Bandas</Link>
+            <Button variant="outline" size="xl" asChild className="group bg-black border-black text-white transition-all duration-300 ease-in-out hover:bg-purple-900 hover:border-purple-900 hover:shadow-lg hover:shadow-purple-500/20 hover:-translate-y-0.5 active:scale-95">
+              <Link to="/auth" className="text-white hover:text-white focus:text-white">
+                Faça seu Cadastro
+              </Link>
             </Button>
           </div>
           <div className="mt-10 grid w-full gap-4 sm:grid-cols-3">
-            <Feature icon={<ShieldCheck className="h-4 w-4" />} title="RBAC pronto">
-              Papéis e permissões inspirados em melhores práticas.
+            <Feature icon={<Users className="h-4 w-4" />} title="Gestão Completa de Bandas">
+              Organize membros, instrumentos, repertórios e cronogramas em um só lugar.
             </Feature>
-            <Feature icon={<BarChart className="h-4 w-4" />} title="Insights de receita">
-              Acompanhe ganhos, despesas e splits.
+            <Feature icon={<DollarSign className="h-4 w-4" />} title="Controle Financeiro Inteligente">
+              Gerencie cachês, despesas, splits entre membros e relatórios detalhados.
             </Feature>
-            <Feature icon={<Music2 className="h-4 w-4" />} title="Eventos e setlists">
-              Planeje shows, ensaios e repertórios.
+            <Feature icon={<CalendarDays className="h-4 w-4" />} title="Agenda de Shows e Eventos">
+              Planeje apresentações, ensaios, contratos e acompanhe sua agenda musical.
             </Feature>
           </div>
         </div>
@@ -61,12 +63,12 @@ const Index = () => {
 
 function Feature({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border bg-card/60 p-4 text-left backdrop-blur">
+    <div className="group cursor-pointer rounded-xl border bg-card/60 p-4 text-left backdrop-blur transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary/20 active:scale-[0.98]">
       <div className="mb-2 inline-flex items-center gap-2 text-sm text-muted-foreground">
         {icon}
         <span>{title}</span>
       </div>
-      <p className="text-sm text-foreground/90">{children}</p>
+      <p className="text-sm text-foreground/90 transition-colors duration-300 group-hover:text-foreground">{children}</p>
     </div>
   );
 }

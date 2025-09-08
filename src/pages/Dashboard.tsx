@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CalendarDays, DollarSign, Music2, Users, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { CreateEventDialog } from "@/components/events/CreateEventDialog";
-import { EventEditModal } from "@/components/events/EventEditModal";
+import { EventEditModal } from "@/components/events/eventeditmodal";
 import { UnidadeDistributionChart } from "@/components/dashboard/UnidadeDistributionChart";
 import { CategoriaBarChart } from "@/components/dashboard/CategoriaBarChart";
 import { StatCardModal } from "@/components/dashboard/StatCardModal";
@@ -99,7 +99,7 @@ const Dashboard = () => {
   );
 
   useSEO({
-    title: "Dashboard — LA Music Hub",
+    title: "Dashboard — LA BAND PILOT",
     description: "Visão geral de bandas, eventos e finanças.",
     canonical: window.location.origin + "/dashboard",
   });

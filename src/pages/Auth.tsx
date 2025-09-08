@@ -9,7 +9,7 @@ import { useSEO } from "@/hooks/useSEO";
 
 const Auth = () => {
   useSEO({
-    title: "Entrar ou criar conta | LA Music Hub",
+    title: "Entrar ou criar conta | LA BAND PILOT",
     description: "Autenticação com Supabase: acesse sua conta ou crie uma nova.",
     canonical: "/auth",
   });
@@ -22,6 +22,8 @@ const Auth = () => {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -39,7 +41,7 @@ const Auth = () => {
         const { error } = await signIn(email, password);
         if (!error) navigate(redirectTo, { replace: true });
       } else {
-        const { error } = await signUp(email, password);
+        const { error } = await signUp(email, password, firstName, lastName);
         if (!error) {
           navigate("/auth", { replace: true });
         }
@@ -96,6 +98,34 @@ const Auth = () => {
               </Button>
             </div>
             <form onSubmit={handleSubmit} className="grid gap-4">
+              {mode === "register" && (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="grid gap-2">
+                      <Label htmlFor="firstName">Nome</Label>
+                      <Input
+                        id="firstName"
+                        type="text"
+                        placeholder="Seu nome"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="lastName">Sobrenome</Label>
+                      <Input
+                        id="lastName"
+                        type="text"
+                        placeholder="Seu sobrenome"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
               <div className="grid gap-2">
                 <Label htmlFor="email">E-mail</Label>
                 <Input

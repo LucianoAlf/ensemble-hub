@@ -61,42 +61,57 @@ export function useBandaMetrics(): UseBandaMetricsReturn {
       setError(null);
 
       if (!user?.id) {
-        // Para desenvolvimento, não bloquear por usuário não autenticado
         console.log('Usuário não autenticado, usando dados mockados');
+        // Fallback para dados mockados se não autenticado
+        setUnidadeChartData(mockUnidadeChartData);
+        setCategoriaChartData(mockCategoriaChartData);
+        return;
       }
 
-      // Por enquanto, usar dados mockados
-      // TODO: Implementar queries reais quando dados estiverem disponíveis
-      
-      // Simular delay de API
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      // Usar dados mockados por enquanto
-      setUnidadeChartData(mockUnidadeChartData);
-      setCategoriaChartData(mockCategoriaChartData);
-
-      // TODO: Implementar queries reais:
-      /*
-      const { data: bandas, error: bandasError } = await supabase
-        .from('banda')
+      // Query real para distribuição por unidade
+      const { data: unidadeData, error: unidadeError } = await supabase
+        .from('unidade')
         .select(`
           id,
-          categoria,
-          unidade_id,
-          ativa,
-          unidade:unidade_id (
-            id,
-            nome
-          )
+          nome,
+          banda!inner(id, ativa)
         `)
-        .eq('ativa', true);
+        .eq('banda.ativa', true);
 
-      if (bandasError) {
-        throw bandasError;
+      if (unidadeError) {
+        throw unidadeError;
       }
 
-      // Processar dados reais aqui quando disponível
-      */
+      // Processar dados de unidade
+      const unidadeStats: Record<string, number> = unidadeData?.reduce((acc: Record<string, number>, unidade: any) => {
+        const nome = unidade.nome.replace('Unidade ', ''); // Remove "Unidade" do nome
+        const count = unidade.banda?.length || 0;
+        acc[nome] = count;
+        return acc;
+      }, {}) || {};
+
+      const totalBandas = Object.values(unidadeStats).reduce((sum: number, count: number) => sum + count, 0);
+
+      // Cores para cada unidade
+      const cores = {
+        'Campo Grande': '#10b981',
+        'Recreio': '#3b82f6', 
+        'Barra': '#f59e0b'
+      };
+
+      const realUnidadeChartData: UnidadeChartData[] = Object.entries(unidadeStats).map(([nome, count]: [string, number]) => ({
+        name: nome,
+        value: totalBandas > 0 ? Math.round((count / totalBandas) * 100) : 0,
+        count: count,
+        color: cores[nome as keyof typeof cores] || '#6b7280'
+      }));
+
+      // Query para distribuição por categoria (usando dados mockados por enquanto, pois não temos campo categoria)
+      // TODO: Implementar quando campo categoria for adicionado à tabela banda
+      const realCategoriaChartData = mockCategoriaChartData;
+
+      setUnidadeChartData(realUnidadeChartData);
+      setCategoriaChartData(realCategoriaChartData);
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar métricas de bandas';

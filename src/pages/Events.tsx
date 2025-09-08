@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Calendar, MapPin, Users, DollarSign, Plus, Search, MoreVertical, Clock } from "lucide-react";
 import { useSEO } from "@/hooks/useSEO";
 import { CreateEventDialog } from "@/components/events/CreateEventDialog";
-import { EventEditModal } from "@/components/events/EventEditModal";
+import { EventEditModal } from "@/components/events/eventeditmodal";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseOptimized } from "@/hooks/useSupabaseOptimized";
 import { useEventModal } from "@/hooks/useEventModal";
@@ -89,7 +89,7 @@ let bandName: string | undefined;
 // Remove initialEvents and rely on backend
 export default function Events() {
   useSEO({
-    title: "Eventos | LA Music Hub",
+    title: "Eventos | LA BAND PILOT",
     description: "Gerencie todos os eventos e shows das suas bandas.",
     canonical: typeof window !== "undefined" ? `${window.location.origin}/events` : undefined,
   });
@@ -249,7 +249,7 @@ export default function Events() {
           
           const rpcRes = await querySupabase(
             async ({ client }) => {
-              return await client.rpc('delete_evento_full' as const, {
+              return await client.rpc('delete_evento_full', {
                 p_evento_id: eventId
               });
             },

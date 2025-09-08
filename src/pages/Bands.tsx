@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, Search, Users, Loader2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Plus, Search, Users, Loader2, MoreVertical } from "lucide-react";
 import { CreateBandDialog } from "@/components/bands/CreateBandDialog";
 import { CompleteBandDialog } from "@/components/bands/CompleteBandDialog";
 import { useSupabaseOptimized } from "@/hooks/useSupabaseOptimized";
@@ -22,7 +24,7 @@ interface Band {
 
 const Bands = () => {
   useSEO({
-    title: "Bandas — LA Music Hub",
+    title: "Bandas — LA BAND PILOT",
     description: "Gerencie bandas, gêneros, membros e logos.",
     canonical: window.location.origin + "/bands",
   });
@@ -32,8 +34,11 @@ const Bands = () => {
   const [open, setOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
+  const [selectedMode, setSelectedMode] = useState<'view' | 'edit'>('view');
   const [isLoading, setIsLoading] = useState(true);
-  const { query: querySupabase } = useSupabaseOptimized();
+  const [bandToDelete, setBandToDelete] = useState<Band | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { query: querySupabase, clearCache } = useSupabaseOptimized();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -92,9 +97,86 @@ const Bands = () => {
     b.genre?.toLowerCase().includes(query.toLowerCase())
   );
 
-  const handleViewBand = (band: Band) => {
+  const handleViewBand = (band: Band, mode: 'view' | 'edit' = 'view') => {
     setSelectedBandId(band.id);
+    setSelectedMode(mode);
     setCompleteDialogOpen(true);
+  };
+
+  const handleDeleteClick = async (band: Band, e?: Event) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setBandToDelete(band);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!bandToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const res = await querySupabase(
+        async ({ client }) => {
+          // Primeiro tentar delete direto
+          return await client
+            .from('banda')
+            .delete()
+            .eq('id', bandToDelete.id);
+        },
+        {
+          cache: { enabled: false, ttlMs: 0, key: `delete-band-${bandToDelete.id}` },
+          enableAbortSignal: false,
+        }
+      );
+
+      if (res.error) {
+        // Se falhar por FK, tentar RPC delete_banda_full
+        if (res.error.message.includes('foreign key') || res.error.message.includes('violates') || (res.error as any).code === '23503') {
+          console.log('Delete direto falhou por FK, tentando RPC delete_banda_full...');
+          
+          const rpcRes = await querySupabase(
+            async ({ client }) => {
+              return await (client as any).rpc('delete_banda_full', {
+                p_banda_id: bandToDelete.id
+              });
+            },
+            {
+              cache: { enabled: false, ttlMs: 0, key: `delete-band-rpc-${bandToDelete.id}` },
+              enableAbortSignal: false,
+            } as const
+          );
+          
+          if (rpcRes.error) {
+            throw new Error(rpcRes.error.message || 'Erro ao excluir banda via RPC');
+          }
+        } else {
+          throw new Error(res.error.message || 'Erro ao excluir banda');
+        }
+      }
+
+      // Atualizar estado local
+      setBands((prev) => prev.filter(b => b.id !== bandToDelete.id));
+      
+      // Invalidar caches
+      clearCache("bands:all-v2");
+      clearCache("dashboard:bands-count-v1");
+      
+      toast({
+        title: "Banda excluída",
+        description: "A banda foi excluída com sucesso.",
+      });
+      
+    } catch (error) {
+      console.error('Erro ao excluir banda:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast({
+        title: "Erro ao excluir banda",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setBandToDelete(null);
+    }
   };
 
   const handleUpdateBand = (updatedBand: { id: string; nome?: string; genero?: string; descricao?: string; logo_url?: string }) => {
@@ -157,6 +239,36 @@ const Bands = () => {
                       <Badge variant="secondary" className="mt-1 transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground">{band.genre ?? 'Geral'}</Badge>
                     </div>
                   </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="opacity-100"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem 
+                        onSelect={(e) => { e?.preventDefault(); e?.stopPropagation(); handleViewBand(band, 'view'); }}
+                      >
+                        Ver Detalhes
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onSelect={(e) => { e?.preventDefault(); e?.stopPropagation(); handleViewBand(band, 'edit'); }}
+                      >
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-destructive"
+                        onSelect={(e) => handleDeleteClick(band, e)}
+                      >
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </CardHeader>
               <CardContent>
@@ -188,9 +300,29 @@ const Bands = () => {
         open={completeDialogOpen} 
         onOpenChange={setCompleteDialogOpen} 
         bandId={selectedBandId} 
-        mode="view"
+        mode={selectedMode}
         onBandUpdated={handleUpdateBand} 
       />
+
+      <AlertDialog open={!!bandToDelete} onOpenChange={() => setBandToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Banda</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a banda "{bandToDelete?.name}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 };

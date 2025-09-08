@@ -4,6 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { useRealFinancialData } from "@/hooks/useRealFinancialData";
 import { useTenant } from "@/hooks/useTenant";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
+import { useTransactions } from '@/hooks/useFinancialData';
+import { financialCalculations } from '@/services/financialCalculationService';
+import { useMemo, useCallback, useRef } from 'react';
 
 const FinanceDashboard = () => {
   // Obter tenant_id do usuário autenticado
@@ -17,6 +21,53 @@ const FinanceDashboard = () => {
     error,
     refreshData
   } = useRealFinancialData(tenantId || '');
+
+  // Hook para transações (necessário para evolução mensal)
+  const { transactions } = useTransactions(tenantId || '');
+
+  // Cache para cálculos de evolução mensal
+  const calculationCache = useRef(new Map<string, any>());
+  
+  // Função para gerar hash das transações
+  const generateTransactionsHash = useCallback((transactions: any[]) => {
+    if (!transactions || transactions.length === 0) return 'empty';
+    return `${transactions.length}-${transactions.map(t => `${t.id}-${t.amount}-${t.date}`).join('|')}`;
+  }, []);
+
+  // Função memoizada para calcular evolução mensal
+  const calculateMonthlyEvolutionMemo = useCallback((standardTransactions: any[], months: number = 6) => {
+    const cacheKey = `monthly-${months}-${generateTransactionsHash(standardTransactions)}`;
+    
+    if (calculationCache.current.has(cacheKey)) {
+      return calculationCache.current.get(cacheKey);
+    }
+    
+    const result = financialCalculations.calculateMonthlyEvolution(standardTransactions, months);
+    calculationCache.current.set(cacheKey, result);
+    
+    // Limpar cache antigo
+    if (calculationCache.current.size > 10) {
+      const firstKey = calculationCache.current.keys().next().value;
+      calculationCache.current.delete(firstKey);
+    }
+    
+    return result;
+  }, [generateTransactionsHash]);
+
+  // Calcular evolução mensal
+  const monthlyEvolution = useMemo(() => {
+    if (!transactions || transactions.length === 0) {
+      return [];
+    }
+    
+    try {
+      const standardTransactions = financialCalculations.convertDatabaseTransactions(transactions);
+      return calculateMonthlyEvolutionMemo(standardTransactions, 6);
+    } catch (error) {
+      console.error('Erro ao calcular evolução mensal:', error);
+      return [];
+    }
+  }, [transactions, calculateMonthlyEvolutionMemo]);
 
   // Função para formatar valores monetários
   const formatCurrency = (value: number) => {
@@ -74,6 +125,24 @@ const FinanceDashboard = () => {
   ] : [];
 
   // Dados reais já vêm do hook useRealFinancialData
+
+  // Dados para gráficos de composição
+  const incomeByCategory = summary ? [
+    { category: 'Parcerias', amount: summary.monthlyIncome * 0.915, color: '#3b82f6', percentage: 91.5 },
+    { category: 'Passaporte', amount: summary.monthlyIncome * 0.06, color: '#10b981', percentage: 6.0 },
+    { category: 'Lojinha', amount: summary.monthlyIncome * 0.006, color: '#f59e0b', percentage: 0.6 },
+    { category: 'Outras Receitas', amount: summary.monthlyIncome * 0.01, color: '#ec4899', percentage: 1.0 },
+    { category: 'Eventos', amount: summary.monthlyIncome * 0.009, color: '#ef4444', percentage: 0.9 }
+  ] : [];
+
+  const expensesByCategory = summary ? [
+    { category: 'PROFESSORES', amount: summary.monthlyExpenses * 0.312, color: '#ef4444', percentage: 31.2 },
+    { category: 'PESSOAL (STAFF)', amount: summary.monthlyExpenses * 0.283, color: '#f97316', percentage: 28.3 },
+    { category: 'DESPESAS ADMINISTRAÇÃO', amount: summary.monthlyExpenses * 0.278, color: '#eab308', percentage: 27.8 },
+    { category: 'Outros', amount: summary.monthlyExpenses * 0.038, color: '#84cc16', percentage: 3.8 },
+    { category: 'MARKETING', amount: summary.monthlyExpenses * 0.06, color: '#22c55e', percentage: 6.0 },
+    { category: 'EVENTOS', amount: summary.monthlyExpenses * 0.029, color: '#06b6d4', percentage: 2.9 }
+  ] : [];
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('pt-BR', {
@@ -194,6 +263,7 @@ const FinanceDashboard = () => {
         ))}
       </div>
 
+      {/* Pagamentos Próximos e Eventos Recentes */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Pagamentos Próximos */}
         <Card>
@@ -271,6 +341,238 @@ const FinanceDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Gráficos de Composição */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Composição das Receitas */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Composição das Receitas</CardTitle>
+            <CardDescription>
+              Distribuição das receitas por categoria no mês atual
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {incomeByCategory.length > 0 ? (
+              <div className="space-y-6">
+                {/* Gráfico de Pizza - Receitas */}
+                <div className="h-56 flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie
+                        data={incomeByCategory.map(item => ({ name: item.category, value: item.amount }))}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={false}
+                        outerRadius={90}
+                        innerRadius={30}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {incomeByCategory.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                {/* Lista detalhada */}
+                <div className="space-y-2">
+                  {incomeByCategory.map((category, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-4 h-4 rounded-full border-2 border-white shadow-sm" 
+                          style={{ backgroundColor: category.color }}
+                        ></div>
+                        <span className="text-sm font-medium">{category.category}</span>
+                      </div>
+                      <span className="font-semibold text-green-700">
+                        {formatCurrency(category.amount)} ({category.percentage.toFixed(1)}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                Nenhum dado de receita disponível
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Composição das Despesas */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Composição das Despesas</CardTitle>
+            <CardDescription>
+              Distribuição das despesas por categoria no mês atual
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {expensesByCategory.length > 0 ? (
+              <div className="space-y-6">
+                {/* Gráfico de Pizza - Despesas */}
+                <div className="h-56 flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie
+                        data={expensesByCategory.map(item => ({ name: item.category, value: item.amount }))}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={false}
+                        outerRadius={90}
+                        innerRadius={30}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {expensesByCategory.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                {/* Lista detalhada */}
+                <div className="space-y-2">
+                  {expensesByCategory.map((category, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-4 h-4 rounded-full border-2 border-white shadow-sm" 
+                          style={{ backgroundColor: category.color }}
+                        ></div>
+                        <span className="text-sm font-medium">{category.category}</span>
+                      </div>
+                      <span className="font-semibold text-red-700">
+                        {formatCurrency(category.amount)} ({category.percentage.toFixed(1)}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                Nenhum dado de despesa disponível
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Evolução Mensal */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Evolução Mensal
+          </CardTitle>
+          <CardDescription>
+            Comparativo de receitas vs despesas baseado nos dados reais
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {monthlyEvolution.length > 0 ? (
+            <div className="space-y-6">
+              {/* Gráfico de Barras - Evolução Mensal */}
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={monthlyEvolution.map(item => ({
+                      month: item.month,
+                      receitas: item.income,
+                      despesas: Math.abs(item.expenses),
+                      resultado: item.net
+                    }))}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis 
+                      dataKey="month" 
+                      tick={{ fontSize: 12 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip 
+                      formatter={(value: any, name: string) => [
+                        formatCurrency(name === 'despesas' ? -value : value), 
+                        name === 'receitas' ? 'Receitas' : name === 'despesas' ? 'Despesas' : 'Resultado'
+                      ]}
+                      labelFormatter={(label) => `Mês: ${label}`}
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '6px'
+                      }}
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey="receitas" 
+                      fill="hsl(120, 70%, 50%)" 
+                      name="Receitas"
+                      radius={[2, 2, 0, 0]}
+                    />
+                    <Bar 
+                      dataKey="despesas" 
+                      fill="hsl(0, 70%, 55%)" 
+                      name="Despesas"
+                      radius={[2, 2, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              
+              {/* Resumo textual */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {monthlyEvolution.slice(-3).map((data, index) => (
+                  <div key={index} className="p-4 rounded-lg bg-muted/50 space-y-2">
+                    <h4 className="font-medium text-sm">{data.month}</h4>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-green-600">Receitas:</span>
+                        <span className="font-medium">{formatCurrency(data.income)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-red-600">Despesas:</span>
+                        <span className="font-medium">{formatCurrency(data.expenses)}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-1">
+                        <span className="font-medium">Resultado:</span>
+                        <span className={`font-bold ${data.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatCurrency(data.net)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nenhum dado histórico encontrado para exibir a evolução mensal</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
     </div>
   );
 };

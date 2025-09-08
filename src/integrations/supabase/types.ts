@@ -1369,6 +1369,12 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_evento_full: {
+        Args: {
+          p_evento_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       event_status: "rascunho" | "confirmado" | "cancelado"

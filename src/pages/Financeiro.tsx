@@ -3,12 +3,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FinanceDashboard from "@/components/finance/FinanceDashboard";
 import FinanceMovements from "@/components/finance/FinanceMovements";
 import FinanceReports from "@/components/finance/FinanceReports";
-import CompactFilters from "@/components/finance/CompactFilters";
 import { useSEO } from "@/hooks/useSEO";
 
 const Financeiro = () => {
   useSEO({
-    title: "Financeiro - LA Music Hub",
+    title: "Financeiro - LA BAND PILOT",
     description: "Controle financeiro completo para bandas e eventos musicais"
   });
 
@@ -35,12 +34,10 @@ const Financeiro = () => {
         </TabsContent>
 
         <TabsContent value="movements" className="space-y-6">
-          <CompactFilters />
           <FinanceMovements />
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">
-          <CompactFilters />
           <FinanceReports />
         </TabsContent>
       </Tabs>
