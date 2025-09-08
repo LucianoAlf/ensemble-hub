@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { HealthStatusBadge } from "@/components/ui/health-status";
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -21,7 +22,7 @@ const Header = () => {
           <span className="font-semibold tracking-tight">LA Band Pilot</span>
         </Link>
 
-        <nav className="hidden gap-6 md:flex">
+        <nav id="main-navigation" className="hidden gap-6 md:flex" role="navigation" aria-label="Navegação principal">
           <NavLink to="/dashboard" className={({isActive}) => 
             `text-sm transition-colors hover:text-foreground ${isActive ? 'text-foreground' : 'text-muted-foreground'}`
           }>
@@ -56,8 +57,9 @@ const Header = () => {
             </>
           ) : (
             <>
-              {/* Network Status Indicator */}
+              {/* Network Status and Health Indicators */}
               <div className="flex items-center gap-2">
+                <HealthStatusBadge />
                 {!isOnline && (
                   <Badge variant="destructive" className="flex items-center gap-1">
                     <WifiOff className="h-3 w-3" />

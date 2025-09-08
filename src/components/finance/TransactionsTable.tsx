@@ -1,5 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+import { VirtualPagination, useVirtualPagination } from "@/components/ui/virtual-pagination";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -7,29 +9,32 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, Edit, Check, Trash2, Music, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useTransactions } from "@/hooks/useFinancialData";
-import { useTenant } from "@/contexts/TenantProvider";
-// Remove unused import since FinancialTransaction type is not directly used
 
-export const TransactionsTable = () => {
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20); // 20 itens por página para melhor performance
-  const { tenantId } = useTenant();
-  const { transactions, loading, error } = useTransactions(tenantId || '', {});
+interface Transaction {
+  id: string;
+  description: string;
+  amount: number;
+  type: 'income' | 'expense';
+  status: 'pending' | 'scheduled' | 'settled';
+  date: string;
+  category?: string;
+  event_name?: string;
+}
 
-  if (loading) {
+interface TransactionsTableProps {
+  transactions: Transaction[];
+  onEdit?: (transaction: Transaction) => void;
+  onDelete?: (transactionId: string) => void;
+}
+
+export const TransactionsTable = ({ transactions, onEdit, onDelete }: TransactionsTableProps) => {
+  const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
+  const pagination = useVirtualPagination(25);
+
+  if (!transactions || transactions.length === 0) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-muted-foreground">Carregando transações...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-destructive">Erro ao carregar transações: {error}</div>
+        <div className="text-muted-foreground">Nenhuma transação encontrada</div>
       </div>
     );
   }
@@ -101,7 +106,7 @@ export const TransactionsTable = () => {
   }, []);
 
   // Move useCallback hook before conditional returns to avoid React Hook errors
-const handleSelectAll = (checked: boolean) => {
+  const handleSelectAll = useCallback((checked: boolean) => {
     if (checked) {
       // Selecionar apenas as transações da página atual
       const currentPageIds = paginatedTransactions.map(t => t.id);
@@ -111,7 +116,7 @@ const handleSelectAll = (checked: boolean) => {
       const currentPageIds = new Set(paginatedTransactions.map(t => t.id));
       setSelectedRows(prev => prev.filter(id => !currentPageIds.has(id)));
     }
-  }, []);
+  }, [paginatedTransactions]);
 
   return (
     <div className="space-y-4">
@@ -133,7 +138,7 @@ const handleSelectAll = (checked: boolean) => {
       )}
 
       {/* Table */}
-      <div className="rounded-md border">
+      <ResponsiveTable className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -237,7 +242,7 @@ const handleSelectAll = (checked: boolean) => {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </ResponsiveTable>
 
       {/* Pagination */}
       {totalPages > 1 && (

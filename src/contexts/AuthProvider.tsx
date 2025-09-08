@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
+import { withFallbacks, FallbackUtils } from '@/lib/fallback-manager';
 import { toast } from "@/components/ui/sonner";
 
 interface AuthContextValue {
@@ -112,56 +114,91 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signInWithGoogle: AuthContextValue["signInWithGoogle"] = async () => {
-    try {
-      // Detectar se está em ambiente restrito (como Windsurf)
-      let isRestrictedEnvironment = false;
-      try {
-        isRestrictedEnvironment = window !== window.top || 
-                                 navigator.userAgent.includes('Windsurf') ||
-                                 window.location !== window.parent.location;
-      } catch (e) {
-        isRestrictedEnvironment = true;
-      }
-
-      const currentOrigin = window.location.origin;
-      const redirectUrl = currentOrigin.includes('localhost') || currentOrigin.includes('127.0.0.1') 
-        ? `${currentOrigin}/auth` 
-        : `${currentOrigin}/dashboard`;
-      
-      // Sempre usar redirecionamento direto para evitar problemas de popup
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: redirectUrl,
-          queryParams: { access_type: 'offline', prompt: 'consent' },
-          scopes: 'email profile openid',
-          skipBrowserRedirect: false
+    const result = await withFallbacks({
+      primary: async () => {
+        let isRestrictedEnvironment = false;
+        try {
+          isRestrictedEnvironment = window !== window.top || 
+                                   navigator.userAgent.includes('Windsurf') ||
+                                   window.location !== window.parent.location;
+        } catch (e) {
+          isRestrictedEnvironment = true;
         }
-      });
-
-      if (error) {
-        console.error("Erro no login com Google:", error);
-        if (isRestrictedEnvironment) {
-          toast("Popup bloqueado", { 
-            description: "Por favor, permita popups e tente novamente." 
-          });
-        } else {
-          toast("Erro no login", { description: error.message });
+        
+        const currentOrigin = window.location.origin;
+        const redirectUrl = currentOrigin.includes('localhost') || currentOrigin.includes('127.0.0.1') 
+          ? `${currentOrigin}/auth` 
+          : `${currentOrigin}/dashboard`;
+        
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: redirectUrl,
+            queryParams: { access_type: 'offline', prompt: 'consent' },
+            scopes: 'email profile openid',
+            skipBrowserRedirect: false
+          }
+        });
+        
+        if (error) {
+          if (isRestrictedEnvironment) {
+            toast("Popup bloqueado", { description: "Por favor, permita popups e tente novamente." });
+          } else {
+            toast("Erro no login", { description: error.message });
+          }
+          throw error;
         }
-        return { error };
-      }
-
-      if (data?.url) {
-        // Forçar redirecionamento na mesma janela
-        window.location.replace(data.url);
+        
+        if (data?.url) {
+          window.location.replace(data.url);
+          return { error: null };
+        }
         return { error: null };
+      },
+      fallbacks: [
+        // Fallback 1: Tentar com redirect direto
+        async () => {
+          const currentOrigin = window.location.origin;
+          const redirectUrl = currentOrigin.includes('localhost') || currentOrigin.includes('127.0.0.1') 
+            ? `${currentOrigin}/auth` 
+            : `${currentOrigin}/dashboard`;
+          const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: "google",
+            options: {
+              redirectTo: redirectUrl,
+              skipBrowserRedirect: false
+            }
+          });
+          
+          if (error) throw error;
+          if (data?.url) {
+            window.location.href = data.url;
+            return { error: null };
+          }
+          return { error: null };
+        },
+        // Fallback 2: Usar sessão local se disponível
+        FallbackUtils.createCacheStrategy('google_auth_session', 15 * 60 * 1000)
+      ],
+      timeout: 10000,
+      onFallback: (index, error) => {
+        logger.warn('Fallback de autenticação Google ativado', {
+          context: 'auth_google',
+          fallbackIndex: index,
+          error: error instanceof Error ? error.message : String(error)
+        });
       }
+    });
 
-      return { error: null };
-    } catch (error) {
-      console.error("Erro ao fazer login com Google:", error);
+    if (result.success) {
+      // Salvar sessão no cache para fallback futuro
+      if (result.data && !result.usedFallback) {
+        FallbackUtils.saveToCache('google_auth_session', result.data);
+      }
+      return result.data || { error: null };
+    } else {
       toast("Erro inesperado", { description: "Tente novamente." });
-      return { error: error as Error };
+      return { error: new Error('Falha na autenticação Google') };
     }
   };
 

@@ -1,5 +1,8 @@
 import { useCallback, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
+import { useRateLimit } from '@/lib/rate-limiter';
+import { withRetry, RETRY_CONFIGS } from '@/lib/retry-logic';
 import type { Database } from "@/integrations/supabase/types";
 
 interface CacheEntry<T = unknown> {
@@ -15,8 +18,8 @@ interface QueryOptions {
     key: string;
   };
   enableAbortSignal?: boolean;
-  retries?: number;
-  retryDelay?: number;
+  retryConfig?: keyof typeof RETRY_CONFIGS;
+  timeoutMs?: number;
 }
 
 interface QueryContext {
@@ -115,6 +118,7 @@ const cacheManager = new CacheManager();
 
 export function useSupabaseOptimized() {
   const abortControllerRef = useRef<AbortController | null>(null);
+  const { checkLimit } = useRateLimit('api');
 
   const query = useCallback(
     async <T>(
@@ -122,8 +126,8 @@ export function useSupabaseOptimized() {
       options?: QueryOptions
     ): Promise<SupabaseResult<T>> => {
       const cacheKey = options?.cache?.key;
-      const retries = options?.retries ?? 0;
-      const retryDelay = options?.retryDelay ?? 1000;
+      const retryConfigName = options?.retryConfig ?? 'network';
+      const timeoutMs = options?.timeoutMs;
       
       // Check cache first
       if (cacheKey && options?.cache?.enabled) {
@@ -140,40 +144,45 @@ export function useSupabaseOptimized() {
         abortControllerRef.current = abortController;
       }
 
-      const executeQuery = async (attempt: number): Promise<SupabaseResult<T>> => {
-        try {
-          const context: QueryContext = {
-            client: supabase,
-            signal: abortController?.signal,
-          };
-          
-          const result = await queryFn(context);
-          
-          // Store in cache if enabled and successful
-          if (cacheKey && options?.cache?.enabled && result.data && !result.error) {
-            cacheManager.set(cacheKey, result.data, options.cache.ttlMs || 60000);
-          }
+      // Usar retry logic avançado
+      const retryConfig = RETRY_CONFIGS[retryConfigName];
+      const finalConfig = timeoutMs ? { ...retryConfig, timeoutMs } : retryConfig;
 
-          return result;
-        } catch (error) {
-          // Handle abort signal
-          if (error instanceof Error && error.name === 'AbortError') {
-            return { data: null, error: new Error('Query was aborted') };
-          }
-          
-          // Retry logic
-          if (attempt < retries) {
-            await new Promise(resolve => setTimeout(resolve, retryDelay * Math.pow(2, attempt)));
-            return executeQuery(attempt + 1);
-          }
-          
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-          console.error('Supabase query error:', error);
-          return { data: null, error: new Error(errorMessage) };
+      const result = await withRetry(async () => {
+        // Verificar rate limit antes da query
+        const rateLimitResult = checkLimit(cacheKey || 'general');
+        if (!rateLimitResult.allowed) {
+          logger.warn('Query bloqueada por rate limit', {
+            context: 'supabase_optimized',
+            cacheKey,
+            retryAfter: rateLimitResult.retryAfter
+          });
+          throw new Error(`Rate limit exceeded. Try again in ${rateLimitResult.retryAfter} seconds.`);
         }
-      };
 
-      return executeQuery(0);
+        const context: QueryContext = {
+          client: supabase,
+          signal: abortController?.signal,
+        };
+        
+        const queryResult = await queryFn(context);
+        
+        if (queryResult.error) {
+          throw queryResult.error;
+        }
+        
+        return queryResult.data;
+      }, finalConfig);
+
+      if (result.success && result.data) {
+        // Store in cache if enabled and successful
+        if (cacheKey && options?.cache?.enabled) {
+          cacheManager.set(cacheKey, result.data, options.cache.ttlMs || 60000);
+        }
+        return { data: result.data, error: null };
+      } else {
+        return { data: null, error: result.error || new Error('Query failed') };
+      }
     },
     []
   );
