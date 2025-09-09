@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -89,7 +89,7 @@ const FinancialDetailModal = ({
   value, 
   data 
 }: FinancialDetailModalProps) => {
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
