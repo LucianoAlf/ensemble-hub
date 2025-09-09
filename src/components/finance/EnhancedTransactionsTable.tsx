@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSupabaseOptimized } from '@/hooks/useSupabaseOptimized';
 import { useAuth } from '@/contexts/AuthProvider';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,6 +11,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MoreHorizontal, TrendingUp, TrendingDown, Clock, CheckCircle, AlertCircle, Eye, Edit, Trash2, Users } from 'lucide-react';
+import { TransactionCard } from './TransactionCard';
+import { AdaptiveConfirmationModal } from '@/components/ui/adaptive-confirmation-modal';
 
 import { Database } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
@@ -37,6 +40,7 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
 }) => {
   const { client: supabase } = useSupabaseOptimized();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -366,7 +370,7 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Transações Financeiras</CardTitle>
-          {selectedTransactions.size > 0 && (
+          {selectedTransactions.size > 0 && !isMobile && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -386,8 +390,36 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
           )}
         </CardHeader>
         <CardContent>
-          <div className="max-h-[500px] overflow-y-auto overflow-x-auto">
-            <table className="w-full">
+          {/* Mobile: Cards Layout */}
+          {isMobile ? (
+            <div className="space-y-4">
+              {transactions.map((transaction) => (
+                <TransactionCard
+                  key={transaction.id}
+                  transaction={transaction}
+                  onEdit={onTransactionEdit}
+                  onDelete={onTransactionDelete}
+                />
+              ))}
+              
+              {transactions.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                      <TrendingUp className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-gray-900 mb-1">Nenhuma transação encontrada</h3>
+                      <p className="text-sm text-gray-500">Comece criando sua primeira transação</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Desktop: Table Layout */
+            <div className="max-h-[500px] overflow-y-auto overflow-x-auto">
+              <table className="w-full">
               <thead>
                 <tr className="border-b">
                   <th className="text-left pl-4 pr-2 py-2">
@@ -496,43 +528,44 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
                   );
                 })}
               </tbody>
-            </table>
-          </div>
-
-          {transactions.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              Nenhuma transação encontrada
+              </table>
+              
+              {transactions.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                      <TrendingUp className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-gray-900 mb-1">Nenhuma transação encontrada</h3>
+                      <p className="text-sm text-gray-500">Comece criando sua primeira transação</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Modal de Confirmação de Exclusão */}
-      <Dialog open={!!showDeleteConfirm} onOpenChange={() => setShowDeleteConfirm(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
-            <DialogDescription>
-              Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDeleteConfirm(null)}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={() => showDeleteConfirm && handleDeleteTransaction(showDeleteConfirm)}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Excluir
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Modal de Confirmação de Exclusão Adaptativo */}
+      <AdaptiveConfirmationModal
+        open={!!showDeleteConfirm}
+        onOpenChange={() => setShowDeleteConfirm(null)}
+        onConfirm={() => showDeleteConfirm && handleDeleteTransaction(showDeleteConfirm)}
+        title="Confirmar Exclusão"
+        description="Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="destructive"
+        item={showDeleteConfirm ? {
+          type: 'transaction',
+          id: showDeleteConfirm,
+          description: transactions.find(t => t.id === showDeleteConfirm)?.description || '',
+          amount: getTransactionAmount(transactions.find(t => t.id === showDeleteConfirm)!),
+          status: transactions.find(t => t.id === showDeleteConfirm)?.status || ''
+        } : undefined}
+      />
     </div>
   );
 };

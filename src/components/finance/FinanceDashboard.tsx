@@ -5,6 +5,7 @@ import { useRealFinancialData } from "@/hooks/useRealFinancialData";
 import { useTenant } from "@/contexts/TenantProvider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
+import { AdaptivePieChart, AdaptiveBarChart, useAdaptiveChartConfig } from '@/components/ui/adaptive-chart';
 import { useTransactions } from '@/hooks/useFinancialData';
 import { financialCalculations } from '@/services/financialCalculationService';
 import { useMemo, useCallback, useRef } from 'react';
@@ -12,6 +13,9 @@ import { useMemo, useCallback, useRef } from 'react';
 const FinanceDashboard = () => {
   // Obter tenant_id do usuário autenticado
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
+  
+  // Configurações adaptativas para gráficos
+  const chartConfig = useAdaptiveChartConfig();
   
   const {
     summary,
@@ -355,29 +359,35 @@ const FinanceDashboard = () => {
           <CardContent>
             {incomeByCategory.length > 0 ? (
               <div className="space-y-6">
-                {/* Gráfico de Pizza - Receitas */}
-                <div className="h-56 flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsPieChart>
-                      <Pie
-                        data={incomeByCategory.map(item => ({ name: item.category, value: item.amount }))}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={false}
-                        outerRadius={90}
-                        innerRadius={30}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {incomeByCategory.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                    </RechartsPieChart>
-                  </ResponsiveContainer>
-                </div>
+                {/* Gráfico de Pizza Adaptativo - Receitas */}
+                <AdaptivePieChart
+                  height={280}
+                  mobileHeight={200}
+                  title="Distribuição de Receitas"
+                  description="Por categoria no mês atual"
+                >
+                  <RechartsPieChart>
+                    <Pie
+                      data={incomeByCategory.map(item => ({ name: item.category, value: item.amount }))}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={false}
+                      outerRadius={chartConfig.pieRadius.outer}
+                      innerRadius={chartConfig.pieRadius.inner}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {incomeByCategory.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: number) => formatCurrency(value)}
+                      contentStyle={chartConfig.tooltip.contentStyle}
+                    />
+                  </RechartsPieChart>
+                </AdaptivePieChart>
                 
                 {/* Lista detalhada */}
                 <div className="space-y-2">
