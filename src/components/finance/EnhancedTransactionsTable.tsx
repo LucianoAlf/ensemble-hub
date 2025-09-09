@@ -398,7 +398,7 @@ export const EnhancedTransactionsTable: React.FC<EnhancedTransactionsTableProps>
                   key={transaction.id}
                   transaction={transaction}
                   onEdit={onTransactionEdit}
-                  onDelete={onTransactionDelete}
+                  onDelete={(transactionId) => setShowDeleteConfirm(transactionId)}
                 />
               ))}
               

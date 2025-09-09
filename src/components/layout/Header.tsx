@@ -1,11 +1,15 @@
 import { Link, NavLink } from "react-router-dom";
-import { Music, LayoutGrid, Users, CalendarDays, DollarSign, LogOut } from "lucide-react";
+import { Music, LayoutGrid, Users, CalendarDays, DollarSign, LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useNavigationShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useState } from "react";
 
 const Header = () => {
   const { user, signOut } = useAuth();
+  const isMobile = useIsMobile();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Ativar atalhos de navegação (funcionalidade mantida, apenas sem indicadores visuais)
   useNavigationShortcuts();
@@ -46,6 +50,18 @@ const Header = () => {
         </nav>
 
         <div className="flex items-center gap-3">
+          {/* Mobile Menu Button */}
+          {isMobile && user && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          )}
+
           {!user ? (
             <>
               <Button variant="ghost" asChild className="invisible">
@@ -58,13 +74,75 @@ const Header = () => {
           ) : (
             <>
               <span className="hidden text-sm text-muted-foreground md:inline">{user.email}</span>
-              <Button variant="outline" onClick={async () => { await signOut(); }}>
+              <Button variant="outline" onClick={async () => { await signOut(); }} className="hidden md:flex">
                 <LogOut className="mr-2 h-4 w-4" /> Sair
               </Button>
+              {/* Mobile Logout */}
+              {isMobile && (
+                <Button variant="ghost" size="icon" onClick={async () => { await signOut(); }} className="md:hidden">
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              )}
             </>
           )}
         </div>
       </div>
+
+      {/* Mobile Navigation Menu */}
+      {isMobile && mobileMenuOpen && user && (
+        <div className="absolute top-14 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
+          <nav className="container mx-auto px-4 py-4 space-y-2" role="navigation" aria-label="Navegação mobile">
+            <NavLink 
+              to="/dashboard" 
+              className={({isActive}) => 
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                }`
+              }
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <LayoutGrid className="h-4 w-4"/>
+              Dashboard
+            </NavLink>
+            <NavLink 
+              to="/bands" 
+              className={({isActive}) => 
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                }`
+              }
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Users className="h-4 w-4"/>
+              Bandas
+            </NavLink>
+            <NavLink 
+              to="/events" 
+              className={({isActive}) => 
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                }`
+              }
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <CalendarDays className="h-4 w-4"/>
+              Eventos
+            </NavLink>
+            <NavLink 
+              to="/financeiro" 
+              className={({isActive}) => 
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                }`
+              }
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <DollarSign className="h-4 w-4"/>
+              Financeiro
+            </NavLink>
+          </nav>
+        </div>
+      )}
     </header>
   );
 };
