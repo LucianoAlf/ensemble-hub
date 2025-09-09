@@ -45,7 +45,11 @@ export function AdaptiveChart({
         style={{ height: chartHeight }}
       >
         <ResponsiveContainer width="100%" height="100%">
-          {children}
+          {React.cloneElement(children as React.ReactElement, {
+            margin: isMobile 
+              ? { top: 20, right: 15, left: 15, bottom: 30 }
+              : { top: 20, right: 30, left: 20, bottom: 20 }
+          })}
         </ResponsiveContainer>
       </div>
       
@@ -182,7 +186,11 @@ export function AdaptiveBarChart({
         style={{ height: chartHeight }}
       >
         <ResponsiveContainer width="100%" height="100%">
-          {children}
+          {React.cloneElement(children as React.ReactElement, {
+            margin: isMobile 
+              ? { top: 20, right: 15, left: 15, bottom: 30 }
+              : { top: 20, right: 30, left: 20, bottom: 20 }
+          })}
         </ResponsiveContainer>
       </div>
       

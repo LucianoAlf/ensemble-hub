@@ -552,12 +552,12 @@ export function CompleteBandDialog({
   const renderViewMode = () => (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="info">Informações</TabsTrigger>
-          <TabsTrigger value="members">Integrantes</TabsTrigger>
-          <TabsTrigger value="repertoire">Repertório</TabsTrigger>
-          <TabsTrigger value="rider">Rider Técnico</TabsTrigger>
-          <TabsTrigger value="stage">Mapa de Palco</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
+          <TabsTrigger value="info" className="text-xs sm:text-sm px-2 py-1">Info</TabsTrigger>
+          <TabsTrigger value="members" className="text-xs sm:text-sm px-2 py-1">Membros</TabsTrigger>
+          <TabsTrigger value="repertoire" className="text-xs sm:text-sm px-2 py-1">Repertório</TabsTrigger>
+          <TabsTrigger value="rider" className="text-xs sm:text-sm px-2 py-1">Rider</TabsTrigger>
+          <TabsTrigger value="stage" className="text-xs sm:text-sm px-2 py-1">Palco</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="space-y-4">
@@ -733,12 +733,12 @@ export function CompleteBandDialog({
   const renderEditMode = () => (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="info">Informações</TabsTrigger>
-          <TabsTrigger value="members">Integrantes</TabsTrigger>
-          <TabsTrigger value="repertoire">Repertório</TabsTrigger>
-          <TabsTrigger value="rider">Rider Técnico</TabsTrigger>
-          <TabsTrigger value="stage">Mapa de Palco</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1">
+          <TabsTrigger value="info" className="text-xs sm:text-sm px-2 py-1">Info</TabsTrigger>
+          <TabsTrigger value="members" className="text-xs sm:text-sm px-2 py-1">Membros</TabsTrigger>
+          <TabsTrigger value="repertoire" className="text-xs sm:text-sm px-2 py-1">Repertório</TabsTrigger>
+          <TabsTrigger value="rider" className="text-xs sm:text-sm px-2 py-1">Rider</TabsTrigger>
+          <TabsTrigger value="stage" className="text-xs sm:text-sm px-2 py-1">Palco</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info">
