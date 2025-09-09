@@ -8,9 +8,24 @@ import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
 import { AdaptivePieChart, AdaptiveBarChart, useAdaptiveChartConfig } from '@/components/ui/adaptive-chart';
 import { useTransactions } from '@/hooks/useFinancialData';
 import { financialCalculations } from '@/services/financialCalculationService';
-import { useMemo, useCallback, useRef } from 'react';
+import { useMemo, useCallback, useRef, useState } from 'react';
+import FinancialDetailModal from './FinancialDetailModal';
+import { useFinancialModalData } from '@/hooks/useFinancialModalData';
 
 const FinanceDashboard = () => {
+  // Estados para controle dos modais
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: 'balance' | 'income' | 'expenses' | 'pending' | null;
+    title: string;
+    value: string;
+  }>({
+    isOpen: false,
+    type: null,
+    title: '',
+    value: ''
+  });
+
   // Obter tenant_id do usuário autenticado
   const { tenantId, loading: tenantLoading, error: tenantError } = useTenant();
   
@@ -28,6 +43,16 @@ const FinanceDashboard = () => {
 
   // Hook para transações (necessário para evolução mensal)
   const { transactions } = useTransactions(tenantId || '');
+
+  // Hook para dados dos modais
+  const {
+    balanceBreakdown,
+    incomeTransactions,
+    expenseTransactions,
+    incomeCategories,
+    expenseCategories,
+    pendingEvents
+  } = useFinancialModalData(tenantId || '');
 
   // Cache para cálculos de evolução mensal
   const calculationCache = useRef(new Map<string, any>());
@@ -90,6 +115,26 @@ const FinanceDashboard = () => {
       balance: "+12.5%"
     };
     return changes[type] || "0%";
+  };
+
+  // Função para abrir modal com dados específicos
+  const openModal = (type: 'balance' | 'income' | 'expenses' | 'pending', title: string, value: string) => {
+    setModalState({
+      isOpen: true,
+      type,
+      title,
+      value
+    });
+  };
+
+  // Função para fechar modal
+  const closeModal = () => {
+    setModalState({
+      isOpen: false,
+      type: null,
+      title: '',
+      value: ''
+    });
   };
 
   // Gerar KPIs baseados nos dados reais
@@ -246,7 +291,21 @@ const FinanceDashboard = () => {
       {/* KPIs Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {kpis.map((kpi, index) => (
-          <Card key={index} className="group cursor-pointer transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary/20 active:scale-[0.98]">
+          <Card 
+            key={index} 
+            className="group cursor-pointer transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary/20 active:scale-[0.98]"
+            onClick={() => {
+              if (kpi.title === "Saldo Total") {
+                openModal('balance', kpi.title, kpi.value);
+              } else if (kpi.title === "Receitas do Mês") {
+                openModal('income', kpi.title, kpi.value);
+              } else if (kpi.title === "Despesas do Mês") {
+                openModal('expenses', kpi.title, kpi.value);
+              } else if (kpi.title === "Cachês Pendentes") {
+                openModal('pending', kpi.title, kpi.value);
+              }
+            }}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground transition-colors duration-300 group-hover:text-primary">
                 {kpi.title}
@@ -582,6 +641,23 @@ const FinanceDashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Detalhes Financeiros */}
+      <FinancialDetailModal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        type={modalState.type!}
+        title={modalState.title}
+        value={modalState.value}
+        data={{
+          breakdown: modalState.type === 'balance' ? balanceBreakdown : undefined,
+          transactions: modalState.type === 'income' ? incomeTransactions : 
+                       modalState.type === 'expenses' ? expenseTransactions : undefined,
+          categories: modalState.type === 'income' ? incomeCategories :
+                     modalState.type === 'expenses' ? expenseCategories : undefined,
+          events: modalState.type === 'pending' ? pendingEvents : undefined
+        }}
+      />
 
     </div>
   );
