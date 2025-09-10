@@ -595,34 +595,34 @@ export function CreateBandDialog({ open, onOpenChange, onBandCreated }: CreateBa
         </DialogHeader>
 
         <Tabs value={currentTab} onValueChange={(value) => setCurrentTab(value as TabType)} className="flex-1">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="info" className="flex items-center gap-2">
-              <span>Banda</span>
-              <Badge variant={getTabBadge("info") === "✓" ? "default" : "secondary"} className="text-xs">
+          <TabsList className="grid w-full grid-cols-5 h-auto">
+            <TabsTrigger value="info" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm">
+              <span className="truncate">Banda</span>
+              <Badge variant={getTabBadge("info") === "✓" ? "default" : "secondary"} className="text-xs min-w-[20px] h-5">
                 {getTabBadge("info")}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="members" className="flex items-center gap-2">
-              <span>Integrantes</span>
-              <Badge variant={getTabBadge("members") === "✓" ? "default" : "secondary"} className="text-xs">
+            <TabsTrigger value="members" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm">
+              <span className="truncate">Membros</span>
+              <Badge variant={getTabBadge("members") === "✓" ? "default" : "secondary"} className="text-xs min-w-[20px] h-5">
                 {getTabBadge("members")}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="repertoire" className="flex items-center gap-2">
-              <span>Repertório</span>
-              <Badge variant="outline" className="text-xs">
+            <TabsTrigger value="repertoire" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm">
+              <span className="truncate">Songs</span>
+              <Badge variant="outline" className="text-xs min-w-[20px] h-5">
                 {getTabBadge("repertoire")}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="rider" className="flex items-center gap-2">
-              <span>Rider</span>
-              <Badge variant={getTabBadge("rider") === "✓" ? "default" : "outline"} className="text-xs">
+            <TabsTrigger value="rider" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm">
+              <span className="truncate">Rider</span>
+              <Badge variant={getTabBadge("rider") === "✓" ? "default" : "outline"} className="text-xs min-w-[20px] h-5">
                 {getTabBadge("rider")}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="stagemap" className="flex items-center gap-2">
-              <span>Palco</span>
-              <Badge variant={getTabBadge("stagemap") === "✓" ? "default" : "outline"} className="text-xs">
+            <TabsTrigger value="stagemap" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm">
+              <span className="truncate">Palco</span>
+              <Badge variant={getTabBadge("stagemap") === "✓" ? "default" : "outline"} className="text-xs min-w-[20px] h-5">
                 {getTabBadge("stagemap")}
               </Badge>
             </TabsTrigger>

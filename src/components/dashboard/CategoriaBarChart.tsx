@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Users } from "lucide-react";
 import { useBandaMetrics } from "@/hooks/useBandaMetrics";
+import { detectMobileDevice } from "@/hooks/use-mobile";
 
 interface CategoriaBarChartProps {
   isLoading?: boolean;
@@ -12,6 +13,7 @@ export function CategoriaBarChart({
 }: CategoriaBarChartProps) {
   const { categoriaChartData, isLoading: metricsLoading } = useBandaMetrics();
   const isLoading = externalLoading || metricsLoading;
+  const isMobile = detectMobileDevice();
 
   // Verificar se os dados estão disponíveis
   if (!categoriaChartData || categoriaChartData.length === 0) {
@@ -67,38 +69,42 @@ export function CategoriaBarChart({
             <div className="text-muted-foreground">Carregando dados...</div>
           </div>
         ) : (
-          <div className="h-[400px] p-4">
+          <div className="h-[300px] sm:h-[400px] p-2 sm:p-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={categoriaChartData}
                 margin={{
                   top: 20,
-                  right: 30,
-                  left: 20,
-                  bottom: 40,
+                  right: isMobile ? 10 : 30,
+                  left: isMobile ? 10 : 20,
+                  bottom: isMobile ? 30 : 40,
                 }}
-                barCategoryGap="20%"
+                barCategoryGap={isMobile ? "10%" : "20%"}
               >
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                 <XAxis
                   dataKey="categoria"
                   stroke="#888888"
-                  fontSize={13}
+                  fontSize={isMobile ? 11 : 13}
                   tickLine={false}
                   axisLine={false}
                   fontWeight={500}
+                  angle={isMobile ? -45 : 0}
+                  textAnchor={isMobile ? "end" : "middle"}
+                  height={isMobile ? 60 : 40}
                 />
                 <YAxis
                   stroke="#888888"
-                  fontSize={12}
+                  fontSize={isMobile ? 10 : 12}
                   tickLine={false}
                   axisLine={false}
+                  width={isMobile ? 30 : 40}
                 />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
                 <Legend 
                   wrapperStyle={{
-                    paddingTop: '15px',
-                    fontSize: '13px'
+                    paddingTop: isMobile ? '10px' : '15px',
+                    fontSize: isMobile ? '11px' : '13px'
                   }}
                 />
                 <Bar 

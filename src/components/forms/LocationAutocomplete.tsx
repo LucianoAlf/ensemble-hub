@@ -202,7 +202,7 @@ export function LocationAutocomplete({
           value={query}
           onChange={(e) => handleInputChange(e.target.value)}
           placeholder="Digite o nome do local..."
-          className="pl-9"
+          className="pl-9 px-3 py-2"
           disabled={disabled}
           onFocus={() => setShowSuggestions(true)}
           onBlur={() => {

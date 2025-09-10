@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { Building2 } from "lucide-react";
 import { useBandaMetrics } from "@/hooks/useBandaMetrics";
+import { detectMobileDevice } from "@/hooks/use-mobile";
 
 interface UnidadeDistributionChartProps {
   isLoading?: boolean;
@@ -12,6 +13,7 @@ export function UnidadeDistributionChart({
 }: UnidadeDistributionChartProps) {
   const { unidadeChartData, isLoading: metricsLoading } = useBandaMetrics();
   const isLoading = externalLoading || metricsLoading;
+  const isMobile = detectMobileDevice();
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -89,7 +91,7 @@ export function UnidadeDistributionChart({
             <div className="text-muted-foreground">Carregando dados...</div>
           </div>
         ) : (
-          <div className="h-[400px] flex items-center justify-center">
+          <div className="h-[300px] sm:h-[400px] flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -98,8 +100,8 @@ export function UnidadeDistributionChart({
                   cy="50%"
                   labelLine={false}
                   label={CustomLabel}
-                  outerRadius={110}
-                  innerRadius={45}
+                  outerRadius={isMobile ? 80 : 110}
+                  innerRadius={isMobile ? 30 : 45}
                   fill="#8884d8"
                   dataKey="value"
                   paddingAngle={2}
@@ -116,12 +118,12 @@ export function UnidadeDistributionChart({
                 <Tooltip content={<CustomTooltip />} />
                 <Legend 
                   wrapperStyle={{
-                    paddingTop: '20px',
-                    fontSize: '14px'
+                    paddingTop: isMobile ? '10px' : '20px',
+                    fontSize: isMobile ? '12px' : '14px'
                   }}
                   formatter={(value, entry: any) => (
                     <span style={{ color: entry.color, fontWeight: 500 }}>
-                      {value} ({entry.payload.count} bandas)
+                      {value} ({entry.payload.count})
                     </span>
                   )}
                 />
