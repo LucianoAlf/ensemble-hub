@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { withFallbacks, FallbackUtils } from '@/lib/fallback-manager';
 import { toast } from "@/components/ui/sonner";
+import { detectMobileDevice } from '@/hooks/use-mobile';
 
 interface AuthContextValue {
   user: User | null;
@@ -116,6 +117,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signInWithGoogle: AuthContextValue["signInWithGoogle"] = async () => {
     const result = await withFallbacks({
       primary: async () => {
+        // Detectar dispositivo mobile usando hook otimizado
+        const isMobile = detectMobileDevice();
+        
         let isRestrictedEnvironment = false;
         try {
           isRestrictedEnvironment = window !== window.top || 
@@ -126,23 +130,48 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
         
         const currentOrigin = window.location.origin;
-        const redirectUrl = currentOrigin.includes('localhost') || currentOrigin.includes('127.0.0.1') 
-          ? `${currentOrigin}/auth` 
-          : `${currentOrigin}/dashboard`;
+        
+        // URLs de redirecionamento específicas para mobile e desktop
+        let redirectUrl;
+        if (currentOrigin.includes('localhost') || currentOrigin.includes('127.0.0.1')) {
+          redirectUrl = `${currentOrigin}/auth`;
+        } else {
+          // Para produção, usar URL específica baseada no dispositivo
+          redirectUrl = isMobile ? `${currentOrigin}/auth` : `${currentOrigin}/dashboard`;
+        }
+        
+        // Configuração otimizada para mobile
+        const oauthOptions = {
+          redirectTo: redirectUrl,
+          queryParams: isMobile 
+            ? { 
+                access_type: 'offline', 
+                prompt: 'select_account',
+                response_type: 'code',
+                include_granted_scopes: 'true'
+              }
+            : { 
+                access_type: 'offline', 
+                prompt: 'consent' 
+              },
+          scopes: 'email profile openid',
+          skipBrowserRedirect: false
+        };
+        
+        console.log(`🔍 Dispositivo detectado: ${isMobile ? 'Mobile' : 'Desktop'}`);
+        console.log(`🔗 Redirect URL: ${redirectUrl}`);
         
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: "google",
-          options: {
-            redirectTo: redirectUrl,
-            queryParams: { access_type: 'offline', prompt: 'consent' },
-            scopes: 'email profile openid',
-            skipBrowserRedirect: false
-          }
+          options: oauthOptions
         });
         
         if (error) {
+          console.error('❌ Erro OAuth Google:', error);
           if (isRestrictedEnvironment) {
             toast("Popup bloqueado", { description: "Por favor, permita popups e tente novamente." });
+          } else if (isMobile) {
+            toast("Erro no login mobile", { description: "Tente abrir em uma nova aba ou usar outro navegador." });
           } else {
             toast("Erro no login", { description: error.message });
           }
@@ -150,29 +179,99 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
         
         if (data?.url) {
-          window.location.replace(data.url);
+          console.log(`✅ Redirecionando para: ${data.url}`);
+          // Para mobile, usar replace para evitar problemas de navegação
+          if (isMobile) {
+            window.location.replace(data.url);
+          } else {
+            window.location.href = data.url;
+          }
           return { error: null };
         }
         return { error: null };
       },
       fallbacks: [
-        // Fallback 1: Tentar com redirect direto
+        // Fallback 1: Tentar com configuração simplificada para mobile
         async () => {
+          const isMobile = detectMobileDevice();
+          
           const currentOrigin = window.location.origin;
-          const redirectUrl = currentOrigin.includes('localhost') || currentOrigin.includes('127.0.0.1') 
-            ? `${currentOrigin}/auth` 
-            : `${currentOrigin}/dashboard`;
+          const redirectUrl = `${currentOrigin}/auth`;
+          
+          console.log('🔄 Tentando fallback 1 - Configuração simplificada');
+          
           const { data, error } = await supabase.auth.signInWithOAuth({
             provider: "google",
             options: {
               redirectTo: redirectUrl,
+              queryParams: isMobile 
+                ? { prompt: 'select_account' }
+                : { prompt: 'consent' },
               skipBrowserRedirect: false
             }
           });
           
           if (error) throw error;
           if (data?.url) {
-            window.location.href = data.url;
+            console.log('✅ Fallback 1 sucesso, redirecionando...');
+            if (isMobile) {
+              // Para mobile, tentar abrir em nova aba se replace falhar
+              try {
+                window.location.replace(data.url);
+              } catch (e) {
+                window.open(data.url, '_self');
+              }
+            } else {
+              window.location.href = data.url;
+            }
+            return { error: null };
+          }
+          return { error: null };
+        },
+        // Fallback 2: Tentar com window.open para mobile
+        async () => {
+          const isMobile = detectMobileDevice();
+          
+          if (!isMobile) {
+            throw new Error('Fallback apenas para mobile');
+          }
+          
+          const currentOrigin = window.location.origin;
+          const redirectUrl = `${currentOrigin}/auth`;
+          
+          console.log('🔄 Tentando fallback 2 - Window.open para mobile');
+          
+          const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: "google",
+            options: {
+              redirectTo: redirectUrl,
+              queryParams: { 
+                prompt: 'select_account',
+                response_type: 'code'
+              },
+              skipBrowserRedirect: true // Não redirecionar automaticamente
+            }
+          });
+          
+          if (error) throw error;
+          if (data?.url) {
+            console.log('✅ Fallback 2 sucesso, abrindo nova aba...');
+            // Tentar abrir em nova aba/janela
+            const authWindow = window.open(data.url, '_blank', 'width=500,height=600,scrollbars=yes,resizable=yes');
+            
+            if (authWindow) {
+              // Monitorar se a janela foi fechada (usuário completou auth)
+              const checkClosed = setInterval(() => {
+                if (authWindow.closed) {
+                  clearInterval(checkClosed);
+                  // Recarregar a página para verificar se auth foi bem-sucedida
+                  setTimeout(() => window.location.reload(), 1000);
+                }
+              }, 1000);
+            } else {
+              // Se popup foi bloqueado, tentar redirect direto
+              window.location.href = data.url;
+            }
             return { error: null };
           }
           return { error: null };

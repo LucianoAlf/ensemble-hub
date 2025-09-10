@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Calendar, Users, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useRealFinancialData } from "@/hooks/useRealFinancialData";
