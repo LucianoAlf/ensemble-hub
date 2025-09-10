@@ -87,9 +87,9 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
     pending: { 
       icon: Clock, 
       label: 'Pendente', 
-      color: 'text-yellow-700',
-      bgColor: 'bg-yellow-100',
-      borderColor: 'border-yellow-300'
+      color: 'text-muted-foreground',
+      bgColor: 'bg-muted/50',
+      borderColor: 'border-muted'
     },
     scheduled: { 
       icon: AlertCircle, 
