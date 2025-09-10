@@ -33,7 +33,6 @@ O **Ensemble Hub** é uma plataforma web completa para gestão de bandas, oferec
 - **Mobilidade:** Interface totalmente responsiva para uso em qualquer dispositivo
 - **Colaboração:** Múltiplos usuários podem gerenciar a mesma banda
 - **Insights:** Relatórios financeiros e análises de performance
-
 ---
 
 ## 👥 Personas e Usuários
