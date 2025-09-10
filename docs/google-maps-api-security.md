@@ -28,7 +28,7 @@ Habilite apenas as APIs necessárias:
 
 1. Acesse o [Google Cloud Console](https://console.cloud.google.com/)
 2. Navegue para "APIs & Services" > "Credentials"
-3. Clique na sua API key
+3. Clique na sua API Key
 4. Configure as seguintes restrições:
 
 #### Application Restrictions
