@@ -210,7 +210,7 @@ export function LocationAutocomplete({
             setTimeout(() => setShowSuggestions(false), 200);
           }}
         />
-        {isLoading && (
+        {isLoading && query.length >= 3 && (
           <div className="absolute right-3 top-3">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
           </div>

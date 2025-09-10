@@ -140,13 +140,14 @@ export function CreateEventDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden mt-4 sm:mt-6">
         <DialogHeader>
           <DialogTitle>Novo Evento</DialogTitle>
           <DialogDescription>Cadastre um novo evento ao calendário.</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="overflow-y-auto max-h-[calc(95vh-120px)] px-1">
+          <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>
@@ -251,7 +252,8 @@ export function CreateEventDialog({
               {isLoading ? "Criando..." : "Criar Evento"}
             </Button>
           </DialogFooter>
-        </form>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
