@@ -406,7 +406,7 @@ const FinanceDashboard = () => {
       </div>
 
       {/* Gráficos de Composição */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Composição das Receitas */}
         <Card>
           <CardHeader>
@@ -417,49 +417,43 @@ const FinanceDashboard = () => {
           </CardHeader>
           <CardContent>
             {incomeByCategory.length > 0 ? (
-              <div className="space-y-6">
-                {/* Gráfico de Pizza Adaptativo - Receitas */}
-                <AdaptivePieChart
-                  height={280}
-                  mobileHeight={200}
-                  title="Distribuição de Receitas"
-                  description="Por categoria no mês atual"
-                >
-                  <RechartsPieChart>
-                    <Pie
-                      data={incomeByCategory.map(item => ({ name: item.category, value: item.amount }))}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={false}
-                      outerRadius={chartConfig.pieRadius.outer}
-                      innerRadius={chartConfig.pieRadius.inner}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {incomeByCategory.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value: number) => formatCurrency(value)}
-                      contentStyle={chartConfig.tooltip.contentStyle}
-                    />
-                  </RechartsPieChart>
-                </AdaptivePieChart>
+              <div className="space-y-4">
+                {/* Gráfico de Pizza - Receitas */}
+                <div className="h-48 sm:h-56 flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie
+                        data={incomeByCategory.map(item => ({ name: item.category, value: item.amount }))}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={false}
+                        outerRadius={80}
+                        innerRadius={25}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {incomeByCategory.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
                 
                 {/* Lista detalhada */}
                 <div className="space-y-2">
                   {incomeByCategory.map((category, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-3">
+                    <div key={index} className="flex items-center justify-between p-2 sm:p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-2 sm:gap-3">
                         <div 
-                          className="w-4 h-4 rounded-full border-2 border-white shadow-sm" 
+                          className="w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-white shadow-sm flex-shrink-0" 
                           style={{ backgroundColor: category.color }}
                         ></div>
-                        <span className="text-sm font-medium">{category.category}</span>
+                        <span className="text-xs sm:text-sm font-medium truncate">{category.category}</span>
                       </div>
-                      <span className="font-semibold text-green-700">
+                      <span className="font-semibold text-green-700 text-xs sm:text-sm whitespace-nowrap ml-2">
                         {formatCurrency(category.amount)} ({category.percentage.toFixed(1)}%)
                       </span>
                     </div>
@@ -484,9 +478,9 @@ const FinanceDashboard = () => {
           </CardHeader>
           <CardContent>
             {expensesByCategory.length > 0 ? (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Gráfico de Pizza - Despesas */}
-                <div className="h-56 flex items-center justify-center">
+                <div className="h-48 sm:h-56 flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <RechartsPieChart>
                       <Pie
@@ -495,8 +489,8 @@ const FinanceDashboard = () => {
                         cy="50%"
                         labelLine={false}
                         label={false}
-                        outerRadius={90}
-                        innerRadius={30}
+                        outerRadius={80}
+                        innerRadius={25}
                         fill="#8884d8"
                         dataKey="value"
                       >
@@ -512,15 +506,15 @@ const FinanceDashboard = () => {
                 {/* Lista detalhada */}
                 <div className="space-y-2">
                   {expensesByCategory.map((category, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-3">
+                    <div key={index} className="flex items-center justify-between p-2 sm:p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-2 sm:gap-3">
                         <div 
-                          className="w-4 h-4 rounded-full border-2 border-white shadow-sm" 
+                          className="w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-white shadow-sm flex-shrink-0" 
                           style={{ backgroundColor: category.color }}
                         ></div>
-                        <span className="text-sm font-medium">{category.category}</span>
+                        <span className="text-xs sm:text-sm font-medium truncate">{category.category}</span>
                       </div>
-                      <span className="font-semibold text-red-700">
+                      <span className="font-semibold text-red-700 text-xs sm:text-sm whitespace-nowrap ml-2">
                         {formatCurrency(category.amount)} ({category.percentage.toFixed(1)}%)
                       </span>
                     </div>
