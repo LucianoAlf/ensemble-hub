@@ -76,55 +76,61 @@ export function LocationAutocomplete({
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    const loadGooglePlaces = async () => {
-      if (window.google && window.google.maps) {
-        console.log('🗺️ Google Maps já carregado');
+    const loadGooglePlaces = () => {
+      // Verificar se já existe
+      if (window.google && window.google.maps && window.google.maps.places) {
+        console.log('✅ Google Maps API já disponível');
         setGoogleLoaded(true);
         return;
       }
 
-      console.log('🔄 Carregando Google Maps API...', { isMobile, retryCount });
+      // Verificar se script já foi adicionado
+      const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+      if (existingScript) {
+        console.log('🔄 Script já existe, aguardando carregamento...');
+        // Aguardar carregamento
+        const checkLoaded = setInterval(() => {
+          if (window.google && window.google.maps && window.google.maps.places) {
+            console.log('✅ Google Maps carregado (script existente)');
+            setGoogleLoaded(true);
+            clearInterval(checkLoaded);
+          }
+        }, 500);
+        
+        // Timeout após 10 segundos
+        setTimeout(() => {
+          clearInterval(checkLoaded);
+          if (!googleLoaded) {
+            console.error('❌ Timeout no carregamento do Google Maps');
+          }
+        }, 10000);
+        return;
+      }
+
+      console.log('🔄 Carregando Google Maps API...');
+
+      // Callback global simples
+      (window as any).initGoogleMaps = () => {
+        console.log('✅ Google Maps carregado via callback');
+        setGoogleLoaded(true);
+        delete (window as any).initGoogleMaps;
+      };
 
       const script = document.createElement("script");
-      // Configuração específica para mobile
-      const loadingParam = isMobile ? 'async' : 'async';
-      const callbackParam = isMobile ? '&callback=initGoogleMaps' : '';
-      
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&language=pt-BR&region=BR&loading=${loadingParam}${callbackParam}`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&callback=initGoogleMaps&language=pt-BR&region=BR`;
       script.async = true;
       script.defer = true;
       
-      // Callback global para mobile
-      if (isMobile) {
-        (window as any).initGoogleMaps = () => {
-          console.log('✅ Google Maps carregado via callback (mobile)');
-          setGoogleLoaded(true);
-          delete (window as any).initGoogleMaps;
-        };
-      }
-      
-      script.onload = () => {
-        if (!isMobile) {
-          console.log('✅ Google Maps carregado via onload (desktop)');
-          setGoogleLoaded(true);
-        }
-      };
-
       script.onerror = (error) => {
-        console.error('❌ Falha ao carregar Google Maps API:', error);
-        // Retry logic para mobile
-        if (isMobile && retryCount < 3) {
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-          }, 2000);
-        }
+        console.error('❌ Erro ao carregar Google Maps:', error);
+        delete (window as any).initGoogleMaps;
       };
 
       document.head.appendChild(script);
     };
 
     loadGooglePlaces();
-  }, [isMobile, retryCount]);
+  }, []);
 
   const searchPlaces = async (input: string) => {
     if (!googleLoaded || !window.google?.maps?.places || input.length < 3) {
@@ -132,79 +138,40 @@ export function LocationAutocomplete({
       return;
     }
 
-    console.log('🔍 Buscando locais:', { input, isMobile, googleLoaded });
+    console.log('🔍 Iniciando busca:', { input, googleLoaded });
     setIsLoading(true);
 
     try {
-      // Estratégia diferente para mobile e desktop
-      if (isMobile) {
-        // Mobile: usar apenas AutocompleteService (mais estável)
-        const service = new window.google.maps.places.AutocompleteService();
-        const request = {
-          input,
-          componentRestrictions: { country: "br" },
-          types: ["establishment", "geocode"],
-        };
+      // Usar apenas AutocompleteService (mais simples e confiável)
+      const service = new window.google.maps.places.AutocompleteService();
+      const request = {
+        input,
+        componentRestrictions: { country: "br" },
+        types: ["establishment", "geocode"],
+      };
 
-        service.getPlacePredictions(
-          request,
-          (predictions: PlacePrediction[] | null, status: string) => {
-            console.log('📱 Resultado mobile:', { status, predictions: predictions?.length });
-            setIsLoading(false);
-            if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-              setPredictions(predictions.slice(0, 5));
-            } else {
-              console.warn('⚠️ Status não OK:', status);
-              setPredictions([]);
-            }
-          }
-        );
-      } else {
-        // Desktop: usar nova API com fallback
-        try {
-          const { AutocompleteSuggestion } = await window.google.maps.importLibrary("places");
-          const service = new window.google.maps.places.AutocompleteService();
-          
-          const request = {
-            input,
-            componentRestrictions: { country: "br" },
-            types: ["establishment", "geocode"],
-          };
-
-          service.getPlacePredictions(
-            request,
-            (predictions: PlacePrediction[] | null, status: string) => {
-              console.log('💻 Resultado desktop:', { status, predictions: predictions?.length });
-              setIsLoading(false);
-              if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-                setPredictions(predictions.slice(0, 5));
-              } else {
-                setPredictions([]);
-              }
-            }
-          );
-        } catch (importError) {
-          console.warn('⚠️ Fallback para API antiga:', importError);
-          // Fallback para API antiga
-          const service = new window.google.maps.places.AutocompleteService();
-          const request = {
-            input,
-            componentRestrictions: { country: "br" },
-            types: ["establishment", "geocode"],
-          };
-
-          service.getPlacePredictions(request, (predictions, status) => {
-            setIsLoading(false);
-            if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-              setPredictions(predictions.slice(0, 5));
-            } else {
-              setPredictions([]);
-            }
+      service.getPlacePredictions(
+        request,
+        (predictions: PlacePrediction[] | null, status: string) => {
+          console.log('📍 Resultado da busca:', { 
+            status, 
+            predictionsCount: predictions?.length || 0,
+            statusOK: status === window.google.maps.places.PlacesServiceStatus.OK 
           });
+          
+          setIsLoading(false);
+          
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setPredictions(predictions.slice(0, 5));
+            console.log('✅ Sugestões carregadas:', predictions.slice(0, 5).map(p => p.structured_formatting.main_text));
+          } else {
+            console.warn('⚠️ Busca sem resultados:', status);
+            setPredictions([]);
+          }
         }
-      }
+      );
     } catch (error) {
-      console.error('❌ Erro na busca de locais:', error);
+      console.error('❌ Erro na busca:', error);
       setIsLoading(false);
       setPredictions([]);
     }
@@ -224,76 +191,21 @@ export function LocationAutocomplete({
   const handlePlaceSelect = async (prediction: PlacePrediction) => {
     if (!window.google?.maps?.places) return;
 
-    console.log('📍 Selecionando local:', { prediction, isMobile });
+    console.log('📍 Selecionando local:', prediction.structured_formatting.main_text);
 
-    try {
-      if (isMobile) {
-        // Mobile: usar apenas dados da predição (mais rápido e confiável)
-        console.log('📱 Usando dados diretos da predição (mobile)');
-        const locationData: LocationData = {
-          name: prediction.structured_formatting.main_text,
-          address: prediction.description,
-          place_id: prediction.place_id,
-        };
+    // Usar sempre dados da predição (mais simples e confiável)
+    const locationData: LocationData = {
+      name: prediction.structured_formatting.main_text,
+      address: prediction.description,
+      place_id: prediction.place_id,
+    };
 
-        setQuery(locationData.name);
-        setShowSuggestions(false);
-        setPredictions([]);
-        onLocationSelect(locationData);
-      } else {
-        // Desktop: tentar usar nova API com fallback
-        try {
-          const { Place } = await window.google.maps.importLibrary("places");
-          
-          const place = new Place({
-            id: prediction.place_id,
-            requestedLanguage: 'pt-BR'
-          });
+    console.log('✅ Local selecionado:', locationData);
 
-          await place.fetchFields({
-            fields: ["displayName", "formattedAddress", "id"]
-          });
-
-          const locationData: LocationData = {
-            name: place.displayName || prediction.structured_formatting.main_text,
-            address: place.formattedAddress || prediction.description,
-            place_id: place.id || prediction.place_id,
-          };
-
-          console.log('💻 Dados obtidos via nova API (desktop):', locationData);
-          setQuery(locationData.name);
-          setShowSuggestions(false);
-          setPredictions([]);
-          onLocationSelect(locationData);
-        } catch (placeError) {
-          console.warn('⚠️ Fallback para dados da predição (desktop):', placeError);
-          // Fallback para dados da predição
-          const locationData: LocationData = {
-            name: prediction.structured_formatting.main_text,
-            address: prediction.description,
-            place_id: prediction.place_id,
-          };
-
-          setQuery(locationData.name);
-          setShowSuggestions(false);
-          setPredictions([]);
-          onLocationSelect(locationData);
-        }
-      }
-    } catch (error) {
-      console.error('❌ Erro ao selecionar local:', error);
-      // Fallback final
-      const locationData: LocationData = {
-        name: prediction.structured_formatting.main_text,
-        address: prediction.description,
-        place_id: prediction.place_id,
-      };
-
-      setQuery(locationData.name);
-      setShowSuggestions(false);
-      setPredictions([]);
-      onLocationSelect(locationData);
-    }
+    setQuery(locationData.name);
+    setShowSuggestions(false);
+    setPredictions([]);
+    onLocationSelect(locationData);
   };
 
   return (
@@ -313,9 +225,8 @@ export function LocationAutocomplete({
           disabled={disabled}
           onFocus={() => setShowSuggestions(true)}
           onBlur={() => {
-            // Delay maior para mobile para permitir cliques nas sugestões
-            const delay = isMobile ? 300 : 200;
-            setTimeout(() => setShowSuggestions(false), delay);
+            // Delay para permitir cliques nas sugestões
+            setTimeout(() => setShowSuggestions(false), 200);
           }}
         />
         {isLoading && query.length >= 3 && (
@@ -326,26 +237,20 @@ export function LocationAutocomplete({
       </div>
 
       {showSuggestions && predictions.length > 0 && (
-        <Card className={`absolute z-50 w-full max-h-60 overflow-y-auto border shadow-lg ${isMobile ? 'touch-manipulation' : ''}`}>
+        <Card className="absolute z-50 w-full max-h-60 overflow-y-auto border shadow-lg">
           {predictions.map((prediction) => (
             <Button
               key={prediction.place_id}
               variant="ghost"
-              className={`w-full justify-start text-left h-auto hover:bg-muted ${isMobile ? 'p-4 min-h-[60px]' : 'p-3'}`}
+              className="w-full justify-start text-left h-auto p-3 hover:bg-muted"
               onClick={() => handlePlaceSelect(prediction)}
-              onTouchStart={() => {
-                // Previne o blur do input no mobile
-                if (isMobile) {
-                  document.getElementById('location')?.focus();
-                }
-              }}
             >
-              <MapPin className={`text-muted-foreground flex-shrink-0 ${isMobile ? 'mr-3 h-5 w-5' : 'mr-2 h-4 w-4'}`} />
+              <MapPin className="mr-2 h-4 w-4 text-muted-foreground flex-shrink-0" />
               <div className="min-w-0 flex-1">
-                <div className={`font-medium truncate ${isMobile ? 'text-base' : 'text-sm'}`}>
+                <div className="font-medium truncate">
                   {prediction.structured_formatting.main_text}
                 </div>
-                <div className={`text-muted-foreground truncate ${isMobile ? 'text-sm' : 'text-xs'}`}>
+                <div className="text-sm text-muted-foreground truncate">
                   {prediction.structured_formatting.secondary_text}
                 </div>
               </div>
